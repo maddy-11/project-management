@@ -17,7 +17,7 @@ def role_page_access(page_name):
             user = request.user
             if not user.is_authenticated:
                 return redirect('/accounts/login')
-            if user.is_staff or user.is_superuser (user.role and page_name in (user.role.page_access or [])):
+            if user.is_staff or user.is_superuser or (user.role and page_name in (user.role.page_access or [])):
                 return view_func(request, *args, **kwargs)
             return redirect('/accounts/login')
         return _wrapped_view
