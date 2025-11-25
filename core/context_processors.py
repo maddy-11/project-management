@@ -8,7 +8,7 @@ def company_profile(request):
 # Add this context processor for sidebar permissions
 
 def user_page_access(request):
-    if request.user.is_staff:
+    if request.user.is_staff or request.user.is_superuser:
         return {'user_page_access': ["user-list", "dashboard", "company-profile", "department-list""role-list", "partners", "projects", "salary",]}
     elif request.user.is_authenticated and hasattr(request.user, 'role') and request.user.role:
         print(request.user.role.page_access)
