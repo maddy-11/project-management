@@ -1,0 +1,303 @@
+<div class="card shadow border-0">
+    <!-- Card Header -->
+    <div class="card-header bg-secondary text-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-pie mr-2"></i>
+                Financial Report: {{ start_date }} to {{ end_date }}
+            </h5>
+            <div class="badge bg-white text-primary">
+                <i class="fas fa-calendar-alt mr-1"></i>
+                {{ invoices|length }} invoices / {{ expenses|length }} expenses
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body">
+        {% if conversion_note %}
+        <div class="alert alert-info alert-dismissible fade show mb-4 shadow-sm">
+            <i class="fas fa-info-circle mr-2"></i>
+            {{ conversion_note }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <!-- Receivables (status='due') -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-hand-holding-usd me-2"></i>Receivables (Total)
+                </h4>
+                <span class="badge bg-warning text-dark">Total: {{ total_status_due }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Due Date</th>
+                            <th>Invoice #</th>
+                            <th>Project</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in status_due_list %}
+                        <tr>
+                            <td>{{ invoice.invoice.due_date|date:"M d, Y" }}</td>
+                            <td><span class="badge bg-light text-dark">#{{ invoice.invoice.invoice_no }}</span></td>
+                            <td><span class="d-inline-block text-truncate" style="max-width: 200px;">{{ invoice.invoice.project.name }}</span></td>
+                            <td class="text-end text-muted">
+                                {{ invoice.net_amount }}
+                                {% if invoice.net_converted %}
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    {{ invoice.original_net_amount }} USD @ {{ invoice.net_rate|floatformat:2 }}
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-active">
+                        <tr>
+                            <th colspan="3" class="text-end">Total Receivables (Status)</th>
+                            <th class="text-end">{{ total_status_due }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Receivables (partner_status='due') -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-hand-holding-usd me-2"></i>Receivables (After Partner Deductions)
+                </h4>
+                <span class="badge bg-warning text-dark">Total: {{ total_partner_due }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Due Date</th>
+                            <th>Invoice #</th>
+                            <th>Project</th>
+                            <th class="text-end">Net Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in partner_due_list %}
+                        <tr>
+                            <td>{{ invoice.invoice.due_date|date:"M d, Y" }}</td>
+                            <td><span class="badge bg-light text-dark">#{{ invoice.invoice.invoice_no }}</span></td>
+                            <td><span class="d-inline-block text-truncate" style="max-width: 200px;">{{ invoice.invoice.project.name }}</span></td>
+                            <td class="text-end fw-bold text-secondary">
+                                {{ invoice.net_amount }}
+                                {% if invoice.net_converted %}
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    {{ invoice.original_net_amount }} USD @ {{ invoice.net_rate|floatformat:2 }}
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-active">
+                        <tr>
+                            <th colspan="3" class="text-end">Total Receivables (After Partner)</th>
+                            <th class="text-end">{{ total_partner_due }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Income (status='paid') -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-coins me-2"></i>Income (Total)
+                </h4>
+                <span class="badge bg-primary">Total: {{ total_status_paid }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Invoice #</th>
+                            <th>Project</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in status_paid_list %}
+                        <tr>
+                            <td>{{ invoice.invoice.paid_date|date:"M d, Y" }}</td>
+                            <td><span class="badge bg-light text-dark">#{{ invoice.invoice.invoice_no }}</span></td>
+                            <td><span class="d-inline-block text-truncate" style="max-width: 200px;">{{ invoice.invoice.project.name }}</span></td>
+                            <td class="text-end text-muted">
+                                {{ invoice.net_amount }}
+                                {% if invoice.net_converted %}
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    {{ invoice.original_net_amount }} USD @ {{ invoice.net_rate|floatformat:2 }}
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-active">
+                        <tr>
+                            <th colspan="3" class="text-end">Total Income (Status)</th>
+                            <th class="text-end">{{ total_status_paid }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Income (partner_status='paid') -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-coins me-2"></i>Income (After Partner Deductions)
+                </h4>
+                <span class="badge bg-primary">Total: {{ total_partner_paid }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Invoice #</th>
+                            <th>Project</th>
+                            <th class="text-end">Net Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for invoice in partner_paid_list %}
+                        <tr>
+                            <td>{{ invoice.invoice.paid_date|date:"M d, Y" }}</td>
+                            <td><span class="badge bg-light text-dark">#{{ invoice.invoice.invoice_no }}</span></td>
+                            <td><span class="d-inline-block text-truncate" style="max-width: 200px;">{{ invoice.invoice.project.name }}</span></td>
+                            <td class="text-end fw-bold text-success">
+                                {{ invoice.net_amount }}
+                                {% if invoice.net_converted %}
+
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    {{ invoice.original_net_amount }} USD @ {{ invoice.net_rate|floatformat:2 }}
+                                </small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-active">
+                        <tr>
+                            <th colspan="3" class="text-end">Total Income (After Partner)</th>
+                            <th class="text-end">{{ total_partner_paid }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Expenses Section -->
+        <div class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">
+                    <i class="fas fa-receipt me-2"></i>Expenses
+                </h4>
+                <span class="badge bg-danger">Total: {{ total_expenses|add:total_salaries }}</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>
+                                {% if expense.subcategory__name %}
+                                <div class="fw-bold">{{ expense.subcategory__category__name }}</div>
+                                <div class="text-muted small">{{ expense.subcategory__name }}</div>
+                                {% else %}
+                                <div class="fw-bold">{{ expense.category__name }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-danger">{{ expense.total }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr class="table">
+                            <td class="fw-bold">Salaries</td>
+                            <td class="text-end text-danger fw-bold">{{ total_salaries }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot class="table-active">
+                        <tr>
+                            <th class="text-end">Total Expenses</th>
+                            <th class="text-end">{{ total_expenses|add:total_salaries }}</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Net Income Summary -->
+        <div class="card bg-light border-0 shadow-sm">
+            <div class="card-body text-center py-4">
+                <h3 class="mb-3">
+                    <span class="badge bg-{% if net_income >= 0 %}success{% else %}danger{% endif %} py-2 px-4">
+                        <i class="fas fa-{% if net_income >= 0 %}chart-line{% else %}chart-bar{% endif %} mr-2"></i>
+                        Net: {{ net_income }}
+                    </span>
+                </h3>
+                <p class="text-muted mb-0">
+                    Period: {{ start_date }} to {{ end_date }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Footer -->
+    <div class="card-footer bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                <i class="fas fa-clock mr-1"></i>
+                Generated on {% now "DATETIME_FORMAT" %}
+            </small>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-2" id="export-pdf-btn">
+                    <i class="fas fa-download mr-1"></i> Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+$(document).ready(function() {
+    $('#export-pdf-btn').on('click', function() {
+        // Collect current filter values
+        const params = new URLSearchParams({
+            start_date: $('#start_date').val(),
+            end_date: $('#end_date').val(),
+            period: $('#period').val()
+        });
+        window.open(`/reports/income-statement-export-pdf/?${params.toString()}`, '_blank');
+    });
+});
+</script>

@@ -1,0 +1,13 @@
+{% extends 'clients/home.html' %}
+{% block content %}
+<div class="centered-container" style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:0 8px;">
+  <div class="card shadow" style="max-width:420px;width:100%;padding:40px 24px;text-align:center;">
+    <h2 class="fw-bold mb-3" style="color:var(--danger,#e11d48);font-size:2em;"><i class="fa-solid fa-triangle-exclamation icon"></i> Delete Partner</h2>
+    <p style="margin-bottom:32px;font-size:1.15em;">Are you sure you want to delete partner <span class="fw-bold">"{{ partner.name }}"</span>?</p>
+    <form method="post" class="delete-actions">{% csrf_token %}
+      <button type="submit" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Delete</button>
+      <a href="{% url 'partner-list' %}" class="btn btn-secondary"><i class="fa-solid fa-xmark"></i> Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %} 

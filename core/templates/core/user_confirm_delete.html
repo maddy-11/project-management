@@ -1,0 +1,151 @@
+{% extends 'clients/home.html' %}
+
+{% block title %}Delete User - {{ user.username }} - FineBooks{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">
+      <i class="fa fa-exclamation-triangle me-2 text-warning"></i> Delete User
+    </h2>
+    <a href="{% url 'user-detail' user.pk %}" class="btn btn-secondary">
+      <i class="fa fa-arrow-left me-1"></i> Back to User Details
+    </a>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+          <h5 class="mb-0">
+            <i class="fa fa-exclamation-triangle me-2"></i> Confirm User Deletion
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warning" role="alert">
+            <i class="fa fa-exclamation-triangle me-2"></i>
+            <strong>Warning!</strong> This action cannot be undone. All data associated with this user will be permanently deleted.
+          </div>
+
+          <div class="row">
+            <div class="col-md-3">
+              <div class="text-center">
+                <div class="avatar-lg bg-danger text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
+                  {{ user.username|first|upper }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-9">
+              <h5 class="mb-3">User Information</h5>
+              <div class="row">
+                <div class="col-sm-6">
+                  <div class="mb-2">
+                    <label class="form-label fw-bold">Username:</label>
+                    <span class="ms-2">{{ user.username }}</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="mb-2">
+                    <label class="form-label fw-bold">Full Name:</label>
+                    <span class="ms-2">{{ user.get_full_name|default:"Not provided" }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-6">
+                  <div class="mb-2">
+                    <label class="form-label fw-bold">Email:</label>
+                    <span class="ms-2">{{ user.email|default:"Not provided" }}</span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="mb-2">
+                    <label class="form-label fw-bold">Role:</label>
+                    <span class="ms-2">
+                      {% if user.role %}
+                        <span class="badge bg-info">{{ user.role.name }}</span>
+                      {% else %}
+                        <span class="text-muted">No role</span>
+                      {% endif %}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-6">
+                  <div class="mb-2">
+                    <label class="form-label fw-bold">Status:</label>
+                    <span class="ms-2">
+                      {% if user.is_active %}
+                        <span class="badge bg-success">Active</span>
+                      {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                      {% endif %}
+                    </span>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="mb-2">
+                    <label class="form-label fw-bold">Date Joined:</label>
+                    <span class="ms-2">{{ user.date_joined|date:'M d, Y' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr>
+
+          <div class="mb-3">
+            <h6 class="text-danger">What will be deleted:</h6>
+            <ul class="list-unstyled">
+              <li><i class="fa fa-check text-danger me-2"></i> User account and profile</li>
+              <li><i class="fa fa-check text-danger me-2"></i> All user notifications</li>
+              <li><i class="fa fa-check text-danger me-2"></i> User activity history</li>
+              <li><i class="fa fa-check text-danger me-2"></i> All associated permissions</li>
+            </ul>
+          </div>
+
+          <div class="alert alert-info" role="alert">
+            <i class="fa fa-info-circle me-2"></i>
+            <strong>Note:</strong> This action will not delete any projects, invoices, or other business data that may be associated with this user. Only the user account itself will be removed.
+          </div>
+
+          <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="d-flex justify-content-end gap-2">
+              <a href="{% url 'user-detail' user.pk %}" class="btn btn-secondary">
+                <i class="fa fa-times me-1"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-danger">
+                <i class="fa fa-trash me-1"></i> Delete User
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.avatar-lg {
+  width: 80px;
+  height: 80px;
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-size: 0.75em;
+}
+
+.list-unstyled li {
+  padding: 0.25rem 0;
+}
+</style>
+{% endblock %}

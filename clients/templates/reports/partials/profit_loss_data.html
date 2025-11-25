@@ -1,0 +1,68 @@
+<div class="card shadow mb-4">
+    <div class="card-header py-3 bg-secondary text-white">
+        <h5 class="m-0 font-weight-bold">
+            <i class="fas fa-file-invoice-dollar mr-2"></i>
+            Financial Report: {{ start_date }} to {{ end_date }}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if conversion_note %}
+        <div class="alert alert-info small shadow-sm">
+            <i class="fas fa-info-circle mr-2"></i>{{ conversion_note }}
+        </div>
+        {% endif %}
+        
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 60%">Item</th>
+                        <th style="width: 40%" class="text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>General Expenses</strong> <span class="text-muted">(without salaries)</span></td>
+                        <td class="text-right font-weight-bold text-danger">{{ expenses }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Salaries & Benefits</strong></td>
+                        <td class="text-right font-weight-bold text-danger">{{ salaries }}</td>
+                    </tr>
+                    <tr class="bg-light">
+                        <td><strong>Total Expenses</strong></td>
+                        <td class="text-right font-weight-bold text-danger">{{ total_costs }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Income</strong> <span class="text-muted"></span></td>
+                        <td class="text-right font-weight-bold text-success">{{ total_revenue }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Income After Partner</strong> <span class="text-muted">(Net Amount)</span></td>
+                        <td class="text-right font-weight-bold text-success">{{ total_revenue_after_partner }}</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr class="{% if profit_loss >= 0 %}table-success{% else %}table-danger{% endif %}">
+                        <th><strong>Net Profit/Loss</strong></th>
+                        <th class="text-right font-weight-bold">{{ profit_loss }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        <div class="mt-4 text-center">
+            <div class="d-inline-block p-1 rounded 
+                {% if profit_loss >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h4 class="mb-0 p-2">
+                    <i class="fas fa-{% if profit_loss >= 0 %}chart-line{% else %}chart-bar{% endif %} mr-2"></i>
+                    {% if profit_loss >= 0 %}Net Profit{% else %}Net Loss{% endif %}: 
+                    <strong>{{ profit_loss }}</strong>
+                </h4>
+            </div>
+                <small class="d-block mt-1">
+                    {{ start_date }} to {{ end_date }}
+                </small>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,1185 @@
+{% extends 'clients/home.html' %}
+
+{% block content %}
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0 me-4">
+                <div class="logo-container bg-white p-3 rounded-circle shadow-sm">
+                  <i class="fas fa-file-invoice-dollar fa-3x text-primary"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <h1 class="h3 text-dark fw-bold mb-2">Invoice Management</h1>
+                <p class="text-muted mb-0">View and manage all project invoices</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Filter Section -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-white" style="background-color: #326597 !important;">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-filter me-2" style="color: white !important;"></i>
+        <h6 class="mb-0 fw-semibold" style="color: white !important;">Filter & Search Invoices</h6>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Project Filter -->
+        <div class="col-md-6">
+          <label for="projectFilter" class="form-label fw-semibold">
+            <i class="fas fa-diagram-project me-2 text-primary"></i>Filter by Project:
+          </label>
+          <select id="projectFilter" class="form-select" style="width: 100%;">
+            <option value="">All Projects</option>
+            {% for item in project_invoice_map %}
+              <option value="{{ item.project.pk }}">{{ item.project.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Clear Filter Button -->
+        <div class="col-md-3 d-flex align-items-end">
+          <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="clearProjectFilter()">
+            <i class="fas fa-times me-2"></i>Clear Filter
+          </button>
+        </div>
+        
+      </div>
+      
+      <!-- Results Summary -->
+      <div class="mt-3 d-flex justify-content-between align-items-center">
+        <small class="text-muted" id="invoiceCounter">
+          <i class="fas fa-info-circle me-1"></i>Showing all invoices from all projects
+        </small>
+        <div class="d-flex align-items-center">
+          <small class="text-muted me-2">Sort by:</small>
+          <select class="form-select form-select-sm" id="sortBy" style="width: auto;">
+            <option value="project">Project (A-Z)</option>
+            <option value="project-desc">Project (Z-A)</option>
+            <option value="invoice-no">Invoice #</option>
+            <option value="amount">Amount</option>
+            <option value="due-date">Due Date</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invoices Content -->
+  {% if project_invoice_map %}
+    {% for item in project_invoice_map %}
+      <div class="project-invoice-section mb-4" data-project-id="{{ item.project.pk }}">
+        <div class="card shadow-sm border-0">
+          <div class="card-header header-gradient text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #326597 !important;">
+            <div class="d-flex align-items-center">
+              <div class="bg-white bg-opacity-10 rounded-circle p-2 me-3">
+                <i class="fas fa-diagram-project text-white"></i>
+              </div>
+              <div>
+                <h5 class="card-title mb-0 " style="color: white !important;">
+                  {{ item.project.name }}
+                </h5>
+                <!-- <small class="text-white-50">
+                  <i class="fas fa-handshake me-1"></i>{{ item.project.partner.name }}
+                  <span class="ms-2">
+                    <i class="fas fa-{% if item.project.currency == 'PKR' %}rupee-sign{% else %}dollar-sign{% endif %} me-1"></i>
+                    {{ item.project.currency }}
+                  </span>
+                </small> -->
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge" style="background-color: rgba(255,255,255,0.9) !important; color: #326597 !important;">
+                {{ item.invoices|length }} invoices
+              </span>
+              {% if request.user.role.name == 'Management' %}
+              <button type="button" class="btn btn-sm btn-light" onclick="createInvoiceForProject({{ item.project.pk }}, '{{ item.project.name }}', '{{ item.project.currency }}', '{{ item.project.partner.name|default:item.project.name }}')">
+                <i class="fas fa-plus me-1"></i>Create
+              </button>
+              <a href="{% url 'project-invoices' item.project.pk %}" class="btn btn-sm btn-outline-light">
+                <i class="fas fa-eye me-1"></i>View All
+              </a>
+              {% endif %}
+            </div>
+          </div>
+          <div class="card-body p-0">
+            {% if item.invoices %}
+              <div class="table-responsive">
+                <table class="table table-hover mb-0 invoice-table">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="border-0 py-3 px-4">
+                        <i class="fas fa-hashtag me-2 text-primary"></i>Invoice #
+                      </th>
+                      <th class="border-0 py-3">
+                        <i class="fas fa-tag me-2 text-primary"></i>Type
+                      </th>
+                      <th class="border-0 py-3">
+                        <i class="fas fa-dollar-sign me-2 text-primary"></i>Amount
+                      </th>
+                      <th class="border-0 py-3">
+                        <i class="fas fa-receipt me-2 text-primary"></i>Net Amount
+                      </th>
+                      <th class="border-0 py-3">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Status
+                      </th>
+                      <th class="border-0 py-3">
+                        <i class="fas fa-calendar me-2 text-primary"></i>Due Date
+                      </th>
+                      <th class="border-0 py-3 text-center">
+                        <i class="fas fa-cogs me-2 text-primary"></i>Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class="text-nowrap">
+                    {% for inv in item.invoices %}
+                    <tr class="invoice-row">
+                      <td class="py-3 px-4">
+                        <div class="d-flex align-items-center">
+                          <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                            <i class="fas fa-file-invoice text-primary"></i>
+                          </div>
+                          <div>
+                            <h6 class="mb-0 fw-semibold">{{ inv.invoice_no }}</h6>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-3">
+                        {% if inv.payment_type == 'custom' %}
+                          <span class="badge bg-info">{{ inv.custom_type|default:'Custom' }}</span>
+                        {% elif inv.payment_type == 'cost_breakdown' %}
+                          <span class="badge bg-secondary">{{ inv.description|default:'Cost Breakdown' }}</span>
+                        {% elif inv.payment_type == 'amc' and inv.amc_year %}
+                          <span class="badge bg-warning">AMC (Year {{ inv.amc_year }})</span>
+                        {% else %}
+                          <span class="badge bg-light text-dark">{{ inv.payment_type|title }}</span>
+                        {% endif %}
+                      </td>
+                      <td class="py-3">
+                        <span class="fw-semibold">{{ inv.amount }}</span>
+                        <small class="text-muted ">{{ inv.project.currency }}</small>
+                      </td>
+                      <td class="py-3">
+                        <span class="fw-semibold text-success">{{ inv.net_amount }}</span>
+                        <small class="text-muted ">{{ inv.project.currency }}</small>
+                      </td>
+                      <td class="py-3">
+                        {% if inv.status == 'paid' %}
+                          <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>{{ inv.get_status_display }}
+                          </span>
+                        {% elif inv.status == 'overdue' %}
+                          <span class="badge bg-danger">
+                            <i class="fas fa-exclamation-triangle me-1"></i>{{ inv.get_status_display }}
+                          </span>
+                        {% elif inv.status == 'scheduled' %}
+                          <span class="badge bg-warning">
+                            <i class="fas fa-clock me-1"></i>{{ inv.get_status_display }}
+                          </span>
+                        {% else %}
+                          <span class="badge bg-secondary">{{ inv.get_status_display }}</span>
+                        {% endif %}
+                      </td>
+                      <td class="py-3">
+                        <span class="text-muted">{{ inv.due_date|date:"M d, Y" }}</span>
+                      </td>
+                      <td class="py-3 text-center">
+                        <div class="d-flex gap-2 justify-content-center">
+                          <button type="button" class="btn btn-sm btn-outline-success" onclick="exportSingleInvoice({{ inv.pk }}, {{ item.project.pk }}, '{{ item.project.name }}', '{{ inv.invoice_no }}', event)" title="Export Invoice">
+                            <i class="fas fa-download me-1"></i>Export
+                          </button>
+                          {% if request.user.role.name == 'Management' %}
+                          <button type="button" class="btn btn-sm btn-outline-primary" onclick="editInvoice({{ inv.pk }})" title="Edit Invoice">
+                            <i class="fas fa-edit me-1"></i>Edit
+                          </button>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <div class="text-center py-5">
+                <div class="py-4">
+                  <i class="fas fa-file-invoice fa-4x text-light mb-3"></i>
+                  <h5 class="text-muted">No Invoices Yet</h5>
+                  <p class="text-muted mb-4">Create your first invoice for this project.</p>
+                  {% if request.user.role.name == 'Management' %}
+                  <button type="button" class="btn btn-primary" onclick="createInvoiceForProject({{ item.project.pk }}, '{{ item.project.name }}', '{{ item.project.currency }}', '{{ item.project.partner.name|default:item.project.name }}')">
+                    <i class="fas fa-plus me-2"></i>Create First Invoice
+                  </button>
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+    
+    <!-- No results message for filtered view -->
+    <div id="noResultsMessage" class="card shadow-sm" style="display: none;">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No Invoices Found</h5>
+        <p class="text-muted">Try adjusting your search or filter criteria.</p>
+        <button class="btn btn-outline-primary" onclick="clearProjectFilter()">
+          <i class="fas fa-times me-1"></i>Clear Filters
+        </button>
+      </div>
+    </div>
+  {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-file-invoice fa-4x text-light mb-3"></i>
+        <h5 class="text-muted">No Invoices Found</h5>
+        <p class="text-muted mb-4">Start by creating invoices for your projects.</p>
+        <a href="{% url 'project-list' %}" class="btn btn-primary">
+          <i class="fas fa-tasks me-2"></i>View Projects
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Create Modal -->
+<div class="modal fade" id="invoiceCreateModal" tabindex="-1" aria-labelledby="invoiceCreateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header header-gradient text-white" style="background-color: #326597 !important;">
+        <h5 class="modal-title" id="invoiceCreateModalLabel" style="color: white !important;">
+          <i class="fas fa-file-invoice-dollar me-2"></i>Create New Invoice
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="invoiceCreateForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="modalInvoiceNo" class="form-label fw-semibold">
+                  <i class="fas fa-hashtag me-2 text-primary"></i>Invoice No.
+                </label>
+                <input type="text" class="form-control" id="modalInvoiceNo" name="invoice_no" required>
+                <div class="invalid-feedback">Please enter a valid invoice number.</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="modalDueDate" class="form-label fw-semibold">
+                  <i class="fas fa-calendar me-2 text-primary"></i>Due Date
+                </label>
+                <input type="date" class="form-control" id="modalDueDate" name="due_date" required>
+                <div class="invalid-feedback">Please enter a valid due date.</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="modalDescription" class="form-label fw-semibold">
+              <i class="fas fa-align-left me-2 text-primary"></i>Description
+            </label>
+            <textarea class="form-control" id="modalDescription" name="description" rows="3" placeholder="Enter invoice description (optional)"></textarea>
+            <div class="invalid-feedback">Please enter a valid description.</div>
+          </div>
+          
+          <!-- Cost Percentage Fields -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-percentage me-2 text-primary"></i>Cost Percentages
+            </label>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                  <div class="card-body p-3">
+                    <label class="form-label small fw-semibold">
+                      <i class="fas fa-laptop-code me-1 text-info"></i>Software %
+                    </label>
+                    <input type="number" class="form-control" id="modalSoftwarePercent" name="software_percent" min="0" max="100" step="0.01" placeholder="0">
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                  <div class="card-body p-3">
+                    <label class="form-label small fw-semibold">
+                      <i class="fas fa-cogs me-1 text-warning"></i>Customization %
+                    </label>
+                    <input type="number" class="form-control" id="modalCustomizationPercent" name="customization_percent" min="0" max="100" step="0.01" placeholder="0">
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                  <div class="card-body p-3">
+                    <label class="form-label small fw-semibold">
+                      <i class="fas fa-plug me-1 text-success"></i>Integration %
+                    </label>
+                    <input type="number" class="form-control" id="modalIntegrationPercent" name="integration_percent" min="0" max="100" step="0.01" placeholder="0">
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                  <div class="card-body p-3">
+                    <label class="form-label small fw-semibold">
+                      <i class="fas fa-handshake me-1 text-primary"></i>AMC Amount
+                    </label>
+                    <input type="number" class="form-control" id="modalAmcPercent" name="amc_percent" min="0" max="100" step="0.01" placeholder="0">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <small class="form-text text-muted">
+              <i class="fas fa-info-circle me-1"></i>Enter percentages for each cost type (0-100%). Amount will be calculated automatically.
+            </small>
+          </div>
+          
+          <!-- Calculated Amount Display -->
+          <div class="row">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <label class="form-label fw-semibold">
+                  <i class="fas fa-calculator me-2 text-success"></i>Calculated Amount
+                </label>
+                <div class="input-group">
+                  <input type="text" class="form-control form-control-lg fw-bold text-success" id="modalCalculatedAmount" readonly>
+                  <span class="input-group-text bg-success text-white fw-bold" id="modalCurrency">USD</span>
+                </div>
+                <small class="form-text text-muted">This amount is calculated based on your percentages and project costs.</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="modalTaxRate" class="form-label fw-semibold">
+                  <i class="fas fa-receipt me-2 text-primary"></i>Tax Rate (%)
+                </label>
+                <input type="number" class="form-control" id="modalTaxRate" name="tax_rate" min="0" max="100" step="0.01" placeholder="0" value="0" required>
+                <div class="invalid-feedback">Please enter a valid tax rate.</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="saveInvoiceBtn">
+          <i class="fas fa-save me-2"></i>Create Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block js %}
+<!-- Select2 CSS/JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+  /* Enhanced CSS Styling */
+  body {
+    background-color: #f5f7f9;
+    color: #343a40;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+  
+  .card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border: none;
+  }
+  
+  .logo-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .header-gradient {
+    background: #326597 !important;
+    border: none !important;
+  }
+  
+  .card-header.header-gradient {
+    background: #326597 !important;
+  }
+  
+  .card-header .card-title {
+    color: white !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  
+  .card-header .badge {
+    background-color: rgba(255,255,255,0.9) !important;
+    color: #326597 !important;
+    font-weight: 600;
+  }
+  
+  .card-header {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .card-header:hover::before {
+    left: 100%;
+  }
+  
+  .table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  
+  .table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+  
+  .invoice-row {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f1f3f4;
+  }
+  
+  .invoice-row:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+  }
+  
+  .project-invoice-section {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .btn-primary {
+    background: linear-gradient(to right, #326597, #2c5aa0);
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(to right, #2c5aa0, #326597);
+    transform: translateY(-2px);
+  }
+  
+  .d-flex .btn {
+    border-radius: 20px;
+    margin: 0;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-outline-primary {
+    border-color: #326597;
+    color: #326597;
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #326597;
+    border-color: #326597;
+    transform: translateY(-2px);
+  }
+  
+  .btn-outline-success {
+    border-color: #28a745;
+    color: #28a745;
+  }
+  
+  .btn-outline-success:hover {
+    background-color: #28a745;
+    border-color: #28a745;
+    transform: translateY(-2px);
+  }
+  
+  .btn-outline-secondary {
+    border-color: #6c757d;
+    color: #6c757d;
+  }
+  
+  .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    transform: translateY(-2px);
+  }
+  
+  .badge {
+    border-radius: 15px;
+    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+  
+  .badge.bg-light {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+    color: #495057 !important;
+  }
+  
+  .badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+  }
+  
+  .badge.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14) !important;
+  }
+  
+  .badge.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #6f42c1) !important;
+  }
+  
+  .badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+  }
+  
+  .badge.bg-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057) !important;
+  }
+  
+  .table-responsive {
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+  }
+  
+  .form-control, .form-select {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #326597;
+    box-shadow: 0 0 0 0.2rem rgba(50, 101, 151, 0.25);
+  }
+  
+  .input-group-text {
+    border-radius: 10px 0 0 10px;
+    border: 2px solid #e9ecef;
+    border-right: none;
+  }
+  
+  .input-group .form-control {
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+  }
+  
+  /* Select2 Styling */
+  .select2-container--bootstrap-5 .select2-selection--single {
+    height: 38px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+  }
+  
+  .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    line-height: 34px;
+    padding-left: 12px;
+    color: #495057;
+  }
+  
+  .select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+    height: 34px;
+  }
+  
+  .select2-container--bootstrap-5 .select2-dropdown {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .select2-container--bootstrap-5 .select2-results__option {
+    padding: 8px 12px;
+  }
+  
+  .select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+    background-color: #326597;
+    color: white;
+  }
+  
+  .select2-container--bootstrap-5 .select2-search--dropdown {
+    padding: 8px;
+  }
+  
+  .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  
+  .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus {
+    outline: none;
+    border-color: #326597;
+    box-shadow: 0 0 0 0.2rem rgba(50, 101, 151, 0.25);
+  }
+  
+  /* Modal Enhancements */
+  .modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+  
+  .modal-header {
+    border-radius: 15px 15px 0 0;
+  }
+  
+  .modal-footer {
+    border-radius: 0 0 15px 15px;
+    border-top: 1px solid #e9ecef;
+  }
+  
+  /* Loading state for Select2 */
+  .select2-selection.loading::after {
+    content: '';
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #326597;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: translateY(-50%) rotate(0deg); }
+    100% { transform: translateY(-50%) rotate(360deg); }
+  }
+  
+  /* Invoice counter styling */
+  #invoiceCounter {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+</style>
+
+<script>
+// Project data for frontend calculations
+window.projectsData = {{ projects_data_json|safe }};
+</script>
+
+<script>
+  // Global variables for the current project
+  let currentProjectId = null;
+  let currentProjectName = '';
+  let currentProjectCurrency = '';
+  let currentPartnerName = ''; // Added for partner name
+
+  // Initialize Select2 and project filtering
+  $(document).ready(function() {
+    // Initialize Select2 for project filter
+    $('#projectFilter').select2({
+      placeholder: 'Select a project to filter invoices...',
+      allowClear: true,
+      width: '100%',
+      minimumResultsForSearch: 0, // Always show search
+      dropdownParent: $('body'), // Ensure proper positioning
+      language: {
+        noResults: function() {
+          return "No projects found";
+        },
+        searching: function() {
+          return "Searching...";
+        }
+      }
+    });
+
+    // Handle project filter change
+    $('#projectFilter').on('change', function() {
+      const selectedProjectId = $(this).val();
+      filterInvoicesByProject(selectedProjectId);
+    });
+    
+    // Add loading state
+    $('#projectFilter').on('select2:open', function() {
+      $(this).next('.select2-container').find('.select2-selection').addClass('loading');
+    });
+    
+    $('#projectFilter').on('select2:close', function() {
+      $(this).next('.select2-container').find('.select2-selection').removeClass('loading');
+    });
+
+    // Handle sort change
+    $('#sortBy').on('change', function() {
+      const sortBy = $(this).val();
+      sortInvoices(sortBy);
+    });
+  });
+
+  // Function to sort invoices
+  function sortInvoices(sortBy) {
+    $('.project-invoice-section').each(function() {
+      const $section = $(this);
+      const $tbody = $section.find('tbody');
+      const $rows = $tbody.find('.invoice-row').toArray();
+      
+      $rows.sort(function(a, b) {
+        const $a = $(a);
+        const $b = $(b);
+        
+        let aVal, bVal;
+        
+        switch(sortBy) {
+          case 'project':
+            aVal = $section.find('h5').text().toLowerCase();
+            bVal = aVal; // Same project
+            return 0;
+          case 'project-desc':
+            aVal = $section.find('h5').text().toLowerCase();
+            bVal = aVal; // Same project
+            return 0;
+          case 'invoice-no':
+            aVal = $a.find('h6').text();
+            bVal = $b.find('h6').text();
+            return aVal.localeCompare(bVal);
+          case 'amount':
+            aVal = parseFloat($a.find('td:nth-child(3) span').text()) || 0;
+            bVal = parseFloat($b.find('td:nth-child(3) span').text()) || 0;
+            return bVal - aVal; // Descending order
+          case 'due-date':
+            aVal = new Date($a.find('td:nth-child(6) span').text());
+            bVal = new Date($b.find('td:nth-child(6) span').text());
+            return aVal - bVal;
+          case 'status':
+            aVal = $a.find('td:nth-child(5) .badge').text();
+            bVal = $b.find('td:nth-child(5) .badge').text();
+            return aVal.localeCompare(bVal);
+          default:
+            return 0;
+        }
+      });
+      
+      // Re-append sorted rows
+      $tbody.empty();
+      $rows.forEach(function(row) {
+        $tbody.append(row);
+      });
+    });
+  }
+
+  // Function to filter invoices by project
+  function filterInvoicesByProject(projectId) {
+    if (!projectId) {
+      // Show all projects
+      $('.project-invoice-section').show();
+      $('#noResultsMessage').hide();
+      $('#invoiceCounter').text('Showing all invoices from all projects');
+      return;
+    }
+
+    // Hide all project sections except the selected one
+    $('.project-invoice-section').hide();
+    
+    // Try to find the project section by ID (handle both string and number types)
+    let projectSection = $(`.project-invoice-section[data-project-id="${projectId}"]`);
+    
+    // If not found, try with string conversion
+    if (projectSection.length === 0) {
+      projectSection = $(`.project-invoice-section[data-project-id="${String(projectId)}"]`);
+    }
+    
+    // If still not found, try with number conversion
+    if (projectSection.length === 0) {
+      projectSection = $(`.project-invoice-section[data-project-id="${Number(projectId)}"]`);
+    }
+    
+    if (projectSection.length > 0) {
+      projectSection.show();
+      
+      // Check if the filtered project has any invoices (excluding the "No invoices" row)
+      const hasInvoices = projectSection.find('tbody tr').not('.text-muted').length > 0;
+      
+      if (!hasInvoices) {
+        $('#noResultsMessage').show();
+        $('#invoiceCounter').text(`No invoices found for the selected project.`);
+      } else {
+        $('#noResultsMessage').hide();
+        const invoiceCount = projectSection.find('tbody tr').not('.text-muted').length;
+        const projectName = projectSection.find('h4').text();
+        $('#invoiceCounter').text(`Showing ${invoiceCount} invoices from ${projectName}`);
+      }
+    } else {
+      $('#noResultsMessage').show();
+      $('#invoiceCounter').text(`Project not found.`);
+    }
+  }
+
+  // Function to clear project filter
+  function clearProjectFilter() {
+    $('#projectFilter').val('').trigger('change');
+    $('.project-invoice-section').show();
+    $('#noResultsMessage').hide();
+    $('#invoiceCounter').text('Showing all invoices from all projects');
+  }
+
+  // Function to export all invoices
+  function exportAllInvoices() {
+    if (confirm('This will export all invoices from all projects. Continue?')) {
+      // Collect all project IDs
+      const projectIds = [];
+      $('.project-invoice-section').each(function() {
+        const projectId = $(this).data('project-id');
+        if (projectId) {
+          projectIds.push(projectId);
+        }
+      });
+      
+      if (projectIds.length === 0) {
+        alert('No invoices found to export.');
+        return;
+      }
+      
+      // For now, redirect to first project's export page
+      // In a real implementation, you'd create a bulk export endpoint
+      const firstProjectId = projectIds[0];
+      window.location.href = `/projects/${firstProjectId}/download-invoices/`;
+    }
+  }
+
+  // Function to edit invoice (placeholder)
+  function editInvoice(invoiceId) {
+    // This would open an edit modal or redirect to edit page
+    alert('Edit functionality would be implemented here for invoice ID: ' + invoiceId);
+  }
+
+  // Function to generate invoice number by calling backend API
+  function generateInvoiceNumber(partnerName, callback) {
+    $.ajax({
+      url: '/get-next-invoice-number/',
+      method: 'POST',
+      data: {
+        partner_name: partnerName || '',
+        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+      },
+      success: function(response) {
+        if (response.success) {
+          callback(response.invoice_number);
+        } else {
+          console.error('Error generating invoice number:', response.error);
+          // Fallback to a timestamp-based number
+          const timestamp = Date.now();
+          callback(`FIT-${timestamp}`);
+        }
+      },
+      error: function() {
+        console.error('Failed to get invoice number from server');
+        // Fallback to a timestamp-based number
+        const timestamp = Date.now();
+        callback(`FIT-${timestamp}`);
+      }
+    });
+  }
+
+  // Function to create invoice for a specific project
+  function createInvoiceForProject(projectId, projectName, currency, partnerName) {
+    currentProjectId = projectId;
+    currentProjectName = projectName;
+    currentProjectCurrency = currency;
+    currentPartnerName = partnerName || projectName; // Use partner name if available, fallback to project name
+    
+    // Set modal title
+    $('#invoiceCreateModalLabel').text(`Create New Invoice - ${projectName}`);
+    
+    // Set currency
+    $('#modalCurrency').text(currency);
+    
+    // Pre-fill with defaults (NO invoice number yet - will be generated on save)
+    const today = new Date().toISOString().slice(0, 10);
+    $('#modalInvoiceNo').val('Will be generated when saved');
+    $('#modalDescription').val('');
+    $('#modalSoftwarePercent').val('');
+    $('#modalCustomizationPercent').val('');
+    $('#modalIntegrationPercent').val('');
+    $('#modalAmcPercent').val('');
+    $('#modalCalculatedAmount').val('');
+    $('#modalTaxRate').val('0');
+    $('#modalDueDate').val(today);
+    
+    $('#invoiceCreateModal').modal('show');
+  }
+
+  // Function to export a single invoice
+  function exportSingleInvoice(invoiceId, projectId, projectName, invoiceNo, event) {
+    // Show loading state
+    const $btn = event.target.closest('button');
+    const originalHtml = $btn.innerHTML;
+    $btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+    $btn.disabled = true;
+    
+    // Make AJAX request to download single invoice
+    $.ajax({
+      url: `/projects/${projectId}/download-invoices/`,
+      method: 'POST',
+      data: {
+        export_type: 'selected',
+        format: 'word',
+        selected_invoices: [invoiceId],
+        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+      },
+      traditional: true,
+      xhrFields: {
+        responseType: 'blob'
+      },
+      success: function(data, status, xhr) {
+        // Create download link
+        const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice_${projectName}_${invoiceNo.replace(/[^a-zA-Z0-9-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Reset button
+        $btn.innerHTML = originalHtml;
+        $btn.disabled = false;
+      },
+      error: function(xhr, status, error) {
+        let errorMessage = 'Error generating invoice: ';
+        if (xhr.responseJSON && xhr.responseJSON.error) {
+          errorMessage += xhr.responseJSON.error;
+          if (xhr.responseJSON.debug) {
+            errorMessage += '\n\nDebug info: ' + JSON.stringify(xhr.responseJSON.debug, null, 2);
+          }
+        } else {
+          errorMessage += error;
+        }
+        alert(errorMessage);
+        $btn.innerHTML = originalHtml;
+        $btn.disabled = false;
+      }
+    });
+  }
+
+  // Calculate amount based on percentages
+  function calculateAmount() {
+    const softwarePercent = parseFloat($('#modalSoftwarePercent').val()) || 0;
+    const customizationPercent = parseFloat($('#modalCustomizationPercent').val()) || 0;
+    const integrationPercent = parseFloat($('#modalIntegrationPercent').val()) || 0;
+    const amcPercent = parseFloat($('#modalAmcPercent').val()) || 0;
+    
+    if (currentProjectId && window.projectsData && window.projectsData[currentProjectId]) {
+      // Get project costs from frontend data
+      const projectData = window.projectsData[currentProjectId];
+      const softwareCost = parseFloat(projectData.software_cost) || 0;
+      const customizationCost = parseFloat(projectData.customization_cost) || 0;
+      const integrationCost = parseFloat(projectData.integration_cost) || 0;
+      const amcCost = parseFloat(projectData.amc_cost) || 0;
+      
+      // Calculate total amount based on percentages of actual costs
+      const totalAmount = (softwareCost * softwarePercent / 100) + 
+                         (customizationCost * customizationPercent / 100) + 
+                         (integrationCost * integrationPercent / 100) + 
+                         (amcCost * amcPercent / 100);
+      
+      $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+    } else if (currentProjectId) {
+      // Fallback to AJAX if data not available in frontend
+      $.ajax({
+        url: `/projects/${currentProjectId}/get-costs/`,
+        method: 'GET',
+        success: function(data) {
+          const softwareCost = parseFloat(data.software_cost) || 0;
+          const customizationCost = parseFloat(data.customization_cost) || 0;
+          const integrationCost = parseFloat(data.integration_cost) || 0;
+          const amcCost = parseFloat(data.amc_cost) || 0;
+          
+          // Calculate total amount based on percentages of actual costs
+          const totalAmount = (softwareCost * softwarePercent / 100) + 
+                             (customizationCost * customizationPercent / 100) + 
+                             (integrationCost * integrationPercent / 100) + 
+                             (amcCost * amcPercent / 100);
+          
+          $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+        },
+        error: function() {
+          // Fallback to simple calculation if AJAX fails
+          const totalAmount = (softwarePercent + customizationPercent + integrationPercent + amcPercent);
+          $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+        }
+      });
+    } else {
+      // Fallback to simple calculation if no project ID
+      const totalAmount = (softwarePercent + customizationPercent + integrationPercent + amcPercent);
+      $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+    }
+  }
+
+  // Add event listeners for percentage changes
+  $('#modalSoftwarePercent, #modalCustomizationPercent, #modalIntegrationPercent, #modalAmcPercent').on('input', calculateAmount);
+
+  // Save invoice button handler
+  $('#saveInvoiceBtn').off('click').on('click', function() {
+    const form = document.getElementById('invoiceCreateForm');
+    if (!form.checkValidity()) {
+      $(form).addClass('was-validated');
+      return;
+    }
+
+    // Disable button and show loading state
+    const $btn = $(this);
+    const originalText = $btn.text();
+    $btn.text('Creating...').prop('disabled', true);
+
+    // Generate unique invoice number only when saving
+    generateInvoiceNumber(currentPartnerName, function(invoiceNumber) {
+      // Get form data with generated invoice number
+      const amount = parseFloat($('#modalCalculatedAmount').val()) || 0;
+      const costPercentages = {
+        software_percent: parseFloat($('#modalSoftwarePercent').val()) || 0,
+        customization_percent: parseFloat($('#modalCustomizationPercent').val()) || 0,
+        integration_percent: parseFloat($('#modalIntegrationPercent').val()) || 0,
+        amc_percent: parseFloat($('#modalAmcPercent').val()) || 0
+      };
+      
+      // Calculate net amount by deducting partner percentages
+      let net_amount = amount;
+      
+      if (currentProjectId && window.projectsData && window.projectsData[currentProjectId]) {
+        // Get project and partner data from frontend variables
+        const projectData = window.projectsData[currentProjectId];
+        const partnerSoftwarePercent = parseFloat(projectData.partner_software_cost) || 0;
+        const partnerCustomizationPercent = parseFloat(projectData.partner_customization_cost) || 0;
+        const partnerIntegrationPercent = parseFloat(projectData.partner_integration_cost) || 0;
+        const partnerAmcPercent = parseFloat(projectData.partner_amc_cost) || 0;
+        
+        const softwareCost = parseFloat(projectData.software_cost) || 0;
+        const customizationCost = parseFloat(projectData.customization_cost) || 0;
+        const integrationCost = parseFloat(projectData.integration_cost) || 0;
+        const amcCost = parseFloat(projectData.amc_cost) || 0;
+        
+        // Calculate the actual partner deduction based on cost amounts
+        let totalPartnerDeduction = 0;
+        if (costPercentages.software_percent > 0 && softwareCost > 0) {
+          const softwareAmount = (costPercentages.software_percent / 100) * softwareCost;
+          totalPartnerDeduction += (softwareAmount * partnerSoftwarePercent) / 100;
+        }
+        if (costPercentages.customization_percent > 0 && customizationCost > 0) {
+          const customizationAmount = (costPercentages.customization_percent / 100) * customizationCost;
+          totalPartnerDeduction += (customizationAmount * partnerCustomizationPercent) / 100;
+        }
+        if (costPercentages.integration_percent > 0 && integrationCost > 0) {
+          const integrationAmount = (costPercentages.integration_percent / 100) * integrationCost;
+          totalPartnerDeduction += (integrationAmount * partnerIntegrationPercent) / 100;
+        }
+        if (costPercentages.amc_percent > 0 && amcCost > 0) {
+          const amcAmount = (costPercentages.amc_percent / 100) * amcCost;
+          totalPartnerDeduction += (amcAmount * partnerAmcPercent) / 100;
+        }
+        
+        net_amount = amount - totalPartnerDeduction;
+      }
+      
+      const invoiceData = {
+        invoice_no: invoiceNumber,
+        description: $('#modalDescription').val(),
+        payment_type: $('#modalDescription').val() || 'Implementation Fee',
+        amount: amount,
+        net_amount: net_amount,
+        status: 'scheduled',
+        partner_status: 'scheduled',
+        due_date: $('#modalDueDate').val(),
+        tax_rate: parseFloat($('#modalTaxRate').val()) || 0,
+        cost_percentages: costPercentages,
+        project_id: currentProjectId
+      };
+
+      // Create the invoice via AJAX
+      $.ajax({
+        url: `/projects/${currentProjectId}/invoices/`,
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        data: {
+          invoices: JSON.stringify([invoiceData]),
+          csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+          if (response.success) {
+            // Close modal and refresh page to show new invoice
+            $('#invoiceCreateModal').modal('hide');
+            location.reload();
+          } else {
+            alert('Error creating invoice: ' + (response.error || 'Unknown error'));
+            $btn.text(originalText).prop('disabled', false);
+          }
+        },
+        error: function(xhr, status, error) {
+          alert('Error creating invoice: ' + error);
+          $btn.text(originalText).prop('disabled', false);
+        }
+      });
+    });
+  });
+
+  // Reset modal when closed
+  $('#invoiceCreateModal').on('hidden.bs.modal', function() {
+    currentProjectId = null;
+    currentProjectName = '';
+    currentProjectCurrency = '';
+    currentPartnerName = ''; // Reset partner name
+    $('#invoiceCreateForm')[0].reset();
+    $('#invoiceCreateForm').removeClass('was-validated');
+  });
+</script>
+{% endblock %} 

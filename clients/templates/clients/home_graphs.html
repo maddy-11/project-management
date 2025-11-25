@@ -1,0 +1,746 @@
+{% extends 'clients/base.html' %}
+
+{% block title %}Dashboard - FineBooks{% endblock %}
+
+{% block content %}
+  {% if request.path == '/' and 'dashboard' in user.role.page_access %}
+  <div class="alert alert-light d-flex align-items-center mb-4 shadow-sm rounded-3">
+    <div class="d-flex align-items-center">
+      <i class="fa fa-home fs-3 me-3"></i>
+      <div>
+        <h4 class="mb-0">Welcome, {{ user.first_name|default:user.username }}!</h4>
+        <small class="text-muted">Glad to see you on your dashboard.</small>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Small, self-contained styles for the stat cards */
+    .card-stat {
+      transition: transform .15s ease, box-shadow .15s ease;
+      overflow: hidden;
+      border: 0;
+      border-radius: 12px;
+    }
+    .card-stat:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 10px 30px rgba(20, 40, 80, 0.08);
+      text-decoration: none;
+    }
+    .card-stat .stat-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+    .card-stat .stat-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .card-stat .stat-title {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #51566a;
+      font-weight: 600;
+    }
+    .card-stat .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0b2140;
+    }
+    .stat-meta {
+      font-size: 0.85rem;
+      color: #7b859a;
+    }
+    /* icon backgrounds (subtle gradients) */
+    .bg-ic-a { background-image: linear-gradient(135deg,#6f4cf5,#5ac8fa); }
+    .bg-ic-b { background-image: linear-gradient(135deg,#ff7a7a,#ffb36b); }
+    .bg-ic-c { background-image: linear-gradient(135deg,#7dd3a6,#3ac9a8); }
+    .bg-ic-d { background-image: linear-gradient(135deg,#9aa7ff,#6b8cff); }
+  </style>
+
+  <!-- Stat cards -->
+  <div class="row g-4 mb-4">
+    <div class="col-sm-6 col-md-3">
+      <a href="{% url 'invoices-active' %}" class="card card-stat p-3 h-100 text-decoration-none text-reset">
+        <div class="card-body p-3 d-flex align-items-center stat-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-ic-a">
+              <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <div>
+              <p class="stat-title mb-1 text-nowrap">Active Invoices</p>
+              <div class="stat-value">{{ active_invoices_count|default:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+      <a href="{% url 'invoices-upcoming' %}" class="card card-stat p-3 h-100 text-decoration-none text-reset">
+        <div class="card-body p-3 d-flex align-items-center stat-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-ic-b">
+              <i class="fa-solid fa-calendar-clock"></i>
+            </div>
+            <div>
+              <p class="stat-title mb-1 text-nowrap">Upcoming Invoices</p>
+              <small class="text-muted">(In 60 days)</small>
+              <div class="stat-value">{{ upcoming_invoices_count|default:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+      <a href="{% url 'project-list' %}" class="card card-stat p-3 h-100 text-decoration-none text-reset">
+        <div class="card-body p-3 d-flex align-items-center stat-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-ic-c">
+              <i class="fa-solid fa-people-roof"></i>
+            </div>
+            <div>
+              <p class="stat-title mb-1 text-nowrap">Clients / Projects</p>
+              <div class="stat-value">{{ total_clients_projects_count|default:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-md-3">
+      <a href="{% url 'partner-list' %}" class="card card-stat p-3 h-100 text-decoration-none text-reset">
+        <div class="card-body p-3 d-flex align-items-center stat-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-ic-d">
+              <i class="fa-solid fa-handshake-angle"></i>
+            </div>
+            <div>
+              <p class="stat-title mb-1 text-nowrap">Partners</p>
+              <div class="stat-value">{{ partners_count|default:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+{% comment %}
+  <!-- Modern Professional Charts Section -->
+  <div class="row g-4 mb-4">
+    <!-- Revenue Trend Chart -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+        <div class="card-header bg-transparent border-0 p-4 pb-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="mb-1 fw-semibold text-dark">Revenue Trend</h5>
+              <small class="text-muted">Monthly revenue over the last 6 months (paid invoices only)</small>
+            </div>
+            <div class="bg-primary-subtle p-2 rounded-circle">
+              <i class="fa-solid fa-chart-line text-primary"></i>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4 pt-0">
+          <canvas id="revenueChart" style="height: 250px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoice Status Distribution -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+        <div class="card-header bg-transparent border-0 p-4 pb-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="mb-1 fw-semibold text-dark">Invoice Status</h5>
+              <small class="text-muted">Current invoice distribution</small>
+            </div>
+            <div class="bg-success-subtle p-2 rounded-circle">
+              <i class="fa-solid fa-chart-pie text-success"></i>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4 pt-0">
+          <canvas id="statusChart" style="height: 250px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <!-- Expenses by Category -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+        <div class="card-header bg-transparent border-0 p-4 pb-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="mb-1 fw-semibold text-dark">Expense Categories</h5>
+              <small class="text-muted">Spending breakdown</small>
+            </div>
+            <div class="bg-warning-subtle p-2 rounded-circle">
+              <i class="fa-solid fa-chart-pie text-warning"></i>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4 pt-0">
+          <canvas id="expenseChart" style="height: 250px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Partners by Revenue -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+        <div class="card-header bg-transparent border-0 p-4 pb-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="mb-1 fw-semibold text-dark">Top Partners by Revenue</h5>
+              <small class="text-muted">Highest revenue generating partners (paid invoices only)</small>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-primary" id="partnerUsdBtn">USD</button>
+              <button class="btn btn-sm btn-primary" id="partnerPkrBtn">PKR</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4 pt-0">
+          <canvas id="partnerChart" style="height: 250px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <!-- Revenue vs Expenses Comparison -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+        <div class="card-header bg-transparent border-0 p-4 pb-2">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h5 class="mb-1 fw-semibold text-dark">Revenue vs Expenses</h5>
+              <small class="text-muted">Monthly comparison over the last 6 months (expenses in PKR, revenue split by currency)</small>
+            </div>
+            <div class="bg-danger-subtle p-2 rounded-circle">
+              <i class="fa-solid fa-chart-column text-danger"></i>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4 pt-0">
+          <canvas id="revenueExpenseChart" style="height: 300px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endcomment %}
+
+  <!-- Existing Expenses summary (kept as-is, but visually matched) -->
+  {% if request.user.role.name == 'Management' %}
+  <!-- <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card p-4 shadow-sm border-1">
+        <h5 class="mb-2"><i class="fa-solid fa-money-bill-wave me-2 text-danger"></i> Total Expenses</h5>
+        <p class="fs-4 fw-bold">{{ budget.currency|default:'USD' }} {{ total_expenses_with_salaries|floatformat:2 }}</p>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-4 shadow-sm border-1">
+        <h5 class="mb-2"><i class="fa-solid fa-user-tie me-2 text-secondary"></i> Total Salaries</h5>
+        <p class="fs-4 fw-bold">{{ budget.currency|default:'USD' }} {{ total_salaries|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- Recent Expenses Table (kept) -->
+  <div class="card p-4 shadow-sm border-0">
+    <h5 class="mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i> Recent Expenses</h5>
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Amount</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for expense in recent_expenses %}
+          <tr>
+            <td>{{ expense.name }}</td>
+            <td>{{ expense.amount }}</td>
+            <td>{{ expense.date }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center text-muted">No recent expenses.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}
+{% endblock %}
+
+{% block js %}
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Global Chart.js configuration for modern look
+    Chart.defaults.font.family = "'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+    Chart.defaults.plugins.legend.labels.padding = 20;
+    
+    // Parse data from Django context
+    const expenseChartData = JSON.parse('{{ expense_chart_data|safe }}');
+    const revenueChartData = JSON.parse('{{ revenue_chart_data|safe }}');
+    const statusChartData = JSON.parse('{{ status_chart_data|safe }}');
+    const partnerChartData = JSON.parse('{{ partner_chart_data|safe }}');
+    const expenseRevenueChartData = JSON.parse('{{ expense_revenue_chart|safe }}');
+
+    // 1. Revenue Trend Chart (Line) - Split by currency
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: revenueChartData.labels,
+            datasets: [{
+                label: 'Revenue (USD)',
+                data: revenueChartData.usd_data,
+                borderColor: '#6f4cf5',
+                backgroundColor: 'rgba(111, 76, 245, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#6f4cf5',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }, {
+                label: 'Revenue (PKR)',
+                data: revenueChartData.pkr_data,
+                borderColor: '#3ac9a8',
+                backgroundColor: 'rgba(58, 201, 168, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                pointBackgroundColor: '#3ac9a8',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: '#6f4cf5',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: true,
+                    titleFont: { weight: 'bold' },
+                    callbacks: {
+                        label: function(context) {
+                            const currency = context.dataset.label.includes('USD') ? '$' : 'PKR ';
+                            return `${context.dataset.label}: ${currency}${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    border: {
+                        display: false
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    border: {
+                        display: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 2. Invoice Status Chart (Doughnut)
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: statusChartData.labels,
+            datasets: [{
+                data: statusChartData.data,
+                backgroundColor: statusChartData.colors,
+                borderWidth: 0,
+                hoverBorderWidth: 3,
+                hoverBorderColor: '#fff',
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    cornerRadius: 8
+                }
+            }
+        }
+    });
+
+    // 3. Expense Categories Chart (Pie)
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    new Chart(expenseCtx, {
+        type: 'pie',
+        data: {
+            labels: expenseChartData.labels,
+            datasets: [{
+                data: expenseChartData.data,
+                backgroundColor: expenseChartData.colors,
+                borderWidth: 0,
+                hoverBorderWidth: 2,
+                hoverBorderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: PKR ${context.parsed.toLocaleString()}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 4. Top Partners Chart (Bar) - Currency switching
+    const partnerCtx = document.getElementById('partnerChart').getContext('2d');
+    let currentPartnerCurrency = 'pkr';
+    let partnerChart;
+    
+    function createPartnerChart(currency) {
+        const data = currency === 'usd' ? partnerChartData.usd : partnerChartData.pkr;
+        const currencySymbol = currency === 'usd' ? '$' : 'PKR ';
+        const currencyLabel = currency === 'usd' ? 'USD' : 'PKR';
+        
+        if (partnerChart) {
+            partnerChart.destroy();
+        }
+        
+        partnerChart = new Chart(partnerCtx, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: `Revenue (${currencyLabel})`,
+                    data: data.data,
+                    backgroundColor: 'rgba(58, 201, 168, 0.8)',
+                    borderColor: '#3ac9a8',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                return `Revenue: ${currencySymbol}${context.parsed.y.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        border: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        border: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return currencySymbol + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Initialize with PKR
+    createPartnerChart('pkr');
+    
+    // Currency switching buttons
+    document.getElementById('partnerUsdBtn').addEventListener('click', function() {
+        currentPartnerCurrency = 'usd';
+        createPartnerChart('usd');
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary');
+        document.getElementById('partnerPkrBtn').classList.remove('btn-primary');
+        document.getElementById('partnerPkrBtn').classList.add('btn-outline-primary');
+    });
+    
+    document.getElementById('partnerPkrBtn').addEventListener('click', function() {
+        currentPartnerCurrency = 'pkr';
+        createPartnerChart('pkr');
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary');
+        document.getElementById('partnerUsdBtn').classList.remove('btn-primary');
+        document.getElementById('partnerUsdBtn').classList.add('btn-outline-primary');
+    });
+
+    // 5. Revenue vs Expenses Chart (Bar) - Expenses in PKR, Revenue split by currency
+    const revenueExpenseCtx = document.getElementById('revenueExpenseChart').getContext('2d');
+    new Chart(revenueExpenseCtx, {
+        type: 'bar',
+        data: {
+            labels: expenseRevenueChartData.labels,
+            datasets: [{
+                label: 'Revenue (USD)',
+                data: expenseRevenueChartData.revenue_usd,
+                backgroundColor: 'rgba(111, 76, 245, 0.8)',
+                borderColor: '#6f4cf5',
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false,
+                yAxisID: 'y1'
+            }, {
+                label: 'Revenue (PKR)',
+                data: expenseRevenueChartData.revenue_pkr,
+                backgroundColor: 'rgba(58, 201, 168, 0.8)',
+                borderColor: '#3ac9a8',
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false,
+                yAxisID: 'y'
+            }, {
+                label: 'Expenses (PKR)',
+                data: expenseRevenueChartData.expenses,
+                backgroundColor: 'rgba(255, 122, 122, 0.8)',
+                borderColor: '#ff7a7a',
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false,
+                yAxisID: 'y'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(context) {
+                            let currency = '';
+                            if (context.dataset.label.includes('USD')) {
+                                currency = '$';
+                            } else {
+                                currency = 'PKR ';
+                            }
+                            return `${context.dataset.label}: ${currency}${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    border: {
+                        display: false
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    border: {
+                        display: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'PKR ' + value.toLocaleString();
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'PKR'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                    border: {
+                        display: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'USD'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+
+<style>
+/* Additional modern chart styling */
+.card {
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+.bg-primary-subtle {
+    background-color: rgba(111, 76, 245, 0.1) !important;
+}
+
+.bg-success-subtle {
+    background-color: rgba(40, 167, 69, 0.1) !important;
+}
+
+.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.bg-info-subtle {
+    background-color: rgba(23, 162, 184, 0.1) !important;
+}
+
+.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+/* Chart container hover effects */
+.card:hover {
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Responsive chart improvements */
+@media (max-width: 768px) {
+    .card-body canvas {
+        height: 200px !important;
+    }
+}
+</style>
+{% endblock %}

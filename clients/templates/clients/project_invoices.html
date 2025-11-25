@@ -1,0 +1,1186 @@
+{% extends 'clients/home.html' %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <h2 class="mb-0">
+        <i class="fa-solid fa-diagram-project me-2"></i> Invoices for Project: {{ project.name }}
+      </h2>
+    </div>
+    <form method="post" class="card-body">
+      {% csrf_token %}
+      <input type="hidden" name="invoices" id="id_invoices">
+      <div class="row g-4 flex-column-reverse flex-md-row">
+        <div class="col-12 col-md-12">
+          <div class="modern-invoice-card" style="width:100%; border: 1.5px solid #0d6efd !important;">
+            <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
+              <span><i class="fa fa-calculator me-2"></i>Project Invoices</span>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-light text-primary fw-bold py-0 px-2" id="addCostBtnHeader" title="Add Invoice">
+                  <i class="fa fa-plus"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive" style="min-width: 350px;">
+                <table class="table modern-invoice-table align-middle" id="invoicesTable" style="min-width: 700px; width: 100%;">
+                  <thead>
+                    <tr>
+                      <th style="width: 7%; min-width: 60px;">Inv#</th>
+                      <th style="width: 15%; min-width: 140px;">Type</th>
+                      <th style="width: 11%; min-width: 100px;">Amount</th>
+                      <th style="width: 11%; min-width: 100px;">Net Amount</th>
+                      <th style="width: 10%; min-width: 100px;">Tax Rate</th>
+                      <th style="width: 10%; min-width: 100px;">Status</th>
+                      <th style="width: 10%; min-width: 100px;">Partner Status</th>
+                      <th style="width: 12%; min-width: 120px;">Due</th>
+                      <th style="width: 14%; min-width: 120px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Rows rendered by JS -->
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colspan="9"><hr style="border-top:2.5px solid #adb5bd; margin: 0 0 0.5rem 0;"></td>
+                    </tr>
+                    <tr class="invoice-total-row">
+                      <td colspan="9" class="text-center" style="border-top: 2.5px solid #adb5bd;">
+                        <span>Total Amount: <span id="invoiceTotalAmount">0</span> <span id="invoiceCurrency">{{ project.currency }}</span></span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div class="invoice-pagination" id="invoicePagination"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 d-flex flex-column flex-sm-row justify-content-center gap-3">
+        <!-- <button type="button" class="btn btn-info" onclick="testCapture()">
+          <i class="fa fa-info-circle me-1"></i> Test Capture
+        </button> -->
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-save me-1"></i> Save
+        </button>
+        <a href="{% url 'project-list' %}" class="btn btn-secondary">Back to Projects</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Hidden data element for custom_costs -->
+{{ project.custom_costs|json_script:"custom-costs-data" }}
+
+<!-- Invoice Edit Modal -->
+<div class="modal fade" id="invoiceEditModal" Barnabas="-1" aria-labelledby="invoiceEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="invoiceEditModalLabel">Edit Invoice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="invoiceEditForm">
+          <div class="mb-3">
+            <label for="modalInvoiceNo" class="form-label">Invoice No.</label>
+            <input type="text" class="form-control" id="modalInvoiceNo" name="invoice_no" required>
+            <div class="invalid-feedback">Please enter a valid invoice number.</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="modalDescription" class="form-label">Description</label>
+            <textarea class="form-control" id="modalDescription" name="description" rows="3" placeholder="Enter invoice description (optional)"></textarea>
+            <div class="invalid-feedback">Please enter a valid description.</div>
+          </div>
+          
+          <!-- Cost Percentage Fields -->
+          <div class="mb-3">
+            <label class="form-label h">Cost Percentages</label>
+            <div class="row g-2">
+              <div class="col-md-3">
+                <label class="form-label small">Software %</label>
+                <input type="number" class="form-control" id="modalSoftwarePercent" name="software_percent" min="0" max="100" step="0.01" placeholder="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">Customization %</label>
+                <input type="number" class="form-control" id="modalCustomizationPercent" name="customization_percent" min="0" max="100" step="0.01" placeholder="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">Integration %</label>
+                <input type="number" class="form-control" id="modalIntegrationPercent" name="integration_percent" min="0" max="100" step="0.01" placeholder="0">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">AMC Amount</label>
+                <input type="number" class="form-control" id="modalAmcPercent" name="amc_percent" min="0" max="100" step="0.01" placeholder="0">
+              </div>
+            </div>
+            <small class="form-text text-muted h">Enter percentages for each cost type (0-100%). Amount will be calculated automatically.</small>
+          </div>
+          
+          <!-- Calculated Amount Display -->
+          <div class="mb-3">
+            <label class="form-label">Calculated Amount</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="modalCalculatedAmount" readonly>
+              <span class="input-group-text">{{ project.currency }}</span>
+            </div>
+            <small class="form-text text-muted">This amount is calculated based on your percentages and project costs.</small>
+          </div>
+          <div class="mb-3">
+            <label for="modalTaxRate" class="form-label">Tax Rate (%)</label>
+            <input type="number" class="form-control" id="modalTaxRate" name="tax_rate" min="0" max="100" step="0.01" placeholder="0" value="0" required>
+            <div class="invalid-feedback">Please enter a valid tax rate.</div>
+          </div>
+          <div class="mb-3">
+            <label for="modalDueDate" class="form-label">Due Date</label>
+            <input type="date" class="form-control" id="modalDueDate" name="due_date" required>
+            <div class="invalid-feedback">Please enter a valid due date.</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveInvoiceBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block js %}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <style>
+    /* Modern card and table styling */
+    .modern-invoice-card {
+      border-radius: 0;
+      box-shadow: none;
+      background: #fff;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+      border: 1.5px solid #0d6efd !important;
+    }
+    .modern-invoice-card .card-header {
+      border-radius: 0;
+      font-size: 1.08rem;
+      letter-spacing: 0.01em;
+      background: #e3f0fb;
+      color: #222;
+      border-bottom: 2px solid #b6d4fe;
+      font-weight: 600;
+    }
+    .modern-invoice-table {
+      background: #fff;
+      border-collapse: collapse;
+      border-radius: 0;
+      overflow: hidden;
+      width: 100%;
+      table-layout: fixed;
+      font-family: 'Segoe UI', 'Liberation Mono', 'Menlo', 'Consolas', monospace;
+    }
+    .modern-invoice-table th, .modern-invoice-table td {
+      vertical-align: middle;
+      border: 1px solid #b6d4fe !important;
+      background: #fff;
+      box-shadow: none;
+      overflow: visible;
+      white-space: nowrap;
+      padding: 0.5rem 0.7rem;
+      font-size: 1.01rem;
+      text-align: center;
+    }
+    .modern-invoice-table th {
+      background: #e3f0fb;
+      color: #222;
+      font-weight: 600;
+      border-bottom: 2px solid #b6d4fe !important;
+      letter-spacing: 0.01em;
+      font-size: 1.04rem;
+    }
+    .modern-invoice-table td {
+      background: #fff;
+      border-bottom: 1px solid #b6d4fe !important;
+      transition: background 0.2s;
+    }
+    .modern-invoice-table tbody tr:hover td {
+      background: #e7f3ff;
+    }
+    .modern-invoice-table input, .modern-invoice-table select {
+      border: 1px solid #b6d4fe;
+      background: #fff;
+      box-shadow: none;
+      outline: none;
+      width: 100%;
+      font-size: 1rem;
+      padding: 0.12rem 0.4rem;
+      margin: 0;
+      color: #222;
+      height: 2rem;
+      border-radius: 0;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .modern-invoice-table input:focus, .modern-invoice-table select:focus {
+      border-color: #0d6efd;
+      background: #e7f3ff;
+      outline: none;
+      box-shadow: none;
+    }
+    .modern-invoice-table .action-btn {
+      border: none;
+      background: none;
+      color: #2563eb;
+      font-size: 1.15rem;
+      margin-right: 0.18rem;
+      transition: color 0.2s, background 0.2s;
+      border-radius: 0;
+      padding: 2px 6px;
+      cursor: pointer;
+    }
+    .modern-invoice-table .action-btn.delete {
+      color: #dc3545;
+    }
+    .modern-invoice-table .action-btn:hover {
+      color: #0a58ca;
+      background: #e7f3ff;
+    }
+    .modern-invoice-table .action-btn.delete:hover {
+      color: #a71d2a;
+      background: #fee2e2;
+    }
+    .modern-invoice-table .action-btn.export {
+      color: #198754;
+    }
+    .modern-invoice-table .action-btn.export:hover {
+      color: #146c43;
+      background: #d1e7dd;
+    }
+    .modern-invoice-table .action-btn.export:disabled {
+      color: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .modern-invoice-table .action-btn.export:disabled:hover {
+      background: none;
+    }
+    .invoice-total-row {
+      background: #f6fafd;
+      font-weight: 700;
+      border-top: 2.5px solid #adb5bd;
+      font-size: 1.08rem;
+      color: #222;
+    }
+    .invoice-total-row span#invoiceCurrency {
+      display: inline-block;
+      background: #e3f0fb;
+      color: #222;
+      font-weight: 600;
+      border-radius: 0;
+      padding: 2px 8px;
+      margin-left: 2px;
+      font-family: inherit;
+    }
+    .invoice-pagination {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .invoice-pagination .page-link {
+      border: none;
+      background: #f1f5f9;
+      color: #2563eb;
+      border-radius: 6px;
+      padding: 0.25rem 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .invoice-pagination .page-link.active {
+      background: #2563eb;
+      color: #fff;
+    }
+    .table-responsive {
+      max-height: 350px;
+      overflow-y: auto;
+    }
+  </style>
+  <script>
+    // Function to generate invoice number by calling backend API
+    function generateInvoiceNumber(partnerName, callback) {
+      $.ajax({
+        url: '/get-next-invoice-number/',
+        method: 'POST',
+        data: {
+          partner_name: partnerName || '',
+          csrfmiddlewaretoken: window.csrfToken
+        },
+        success: function(response) {
+          if (response.success) {
+            callback(response.invoice_number);
+          } else {
+            console.error('Error generating invoice number:', response.error);
+            // Fallback to a timestamp-based number
+            const timestamp = Date.now();
+            callback(`FIT-${timestamp}`);
+          }
+        },
+        error: function() {
+          console.error('Failed to get invoice number from server');
+          // Fallback to a timestamp-based number
+          const timestamp = Date.now();
+          callback(`FIT-${timestamp}`);
+        }
+      });
+    }
+
+    // Set the projectId globally for use in AJAX calls
+    window.projectId = '{{ project.pk }}';
+    // Make CSRF token available globally for AJAX
+    window.csrfToken = $('[name=csrfmiddlewaretoken]').val();
+    // Set project currency
+    window.projectCurrency = '{{ project.currency }}';
+    // Set partner name for invoice number generation
+    window.partnerName = '{{ project.partner.name|default:"" }}';
+    $(document).ready(function() {
+      try {
+        var initialInvoices = JSON.parse('{{ initial_invoices|escapejs }}');
+        if (Array.isArray(initialInvoices) && initialInvoices.length > 0) {
+          // Sort initial invoices by due_date to ensure correct order
+          initialInvoices.sort((a, b) => new Date(a.due_date) - new Date(a.due_date));
+          window.invoices = initialInvoices;
+          renderInvoicesTable();
+        } else {
+          window.invoices = [];
+        }
+      } catch (e) { 
+        console.error('Error parsing initial invoices:', e);
+        window.invoices = []; 
+      }
+      
+      console.log('Initial invoices data:', initialInvoices);
+      if (Array.isArray(initialInvoices) && initialInvoices.length > 0) {
+        console.log('Sorted invoices:', window.invoices);
+      }
+      
+      // Fix Add Invoice button handler
+      $('#addCostBtnHeader').off('click').on('click', function() {
+        editingInvoiceIdx = window.invoices.length;
+        const today = new Date().toISOString().slice(0, 10);
+        // Pre-fill with defaults (NO invoice number yet - will be generated on save)
+        $('#modalInvoiceNo').val('Will be generated when saved');
+        $('#modalDescription').val('');
+        $('#modalSoftwarePercent').val('');
+        $('#modalCustomizationPercent').val('');
+        $('#modalIntegrationPercent').val('');
+        $('#modalAmcPercent').val('');
+        $('#modalCalculatedAmount').val('');
+        $('#modalTaxRate').val('0');
+        $('#modalDueDate').val(today);
+        
+        // For new invoices, show all percentage fields (not AMC invoices)
+        $('#modalSoftwarePercent').closest('.col-md-3').show();
+        $('#modalCustomizationPercent').closest('.col-md-3').show();
+        $('#modalIntegrationPercent').closest('.col-md-3').show();
+        $('#modalAmcPercent').closest('.col-md-3').show();
+        $('#modalCalculatedAmount').closest('.input-group').parent().show();
+        $('.h').show(); // Show the cost percentages label
+        
+        $('#invoiceEditModal').modal('show');
+      });
+      // Edit invoice button handler
+      $('#invoicesTable').on('click', '.edit-invoice', function() {
+        const idx = $(this).data('idx');
+        editingInvoiceIdx = idx;
+        const inv = window.invoices[idx];
+        $('#modalInvoiceNo').val(inv.invoice_no);
+        $('#modalDescription').val(inv.description || '');
+
+        // Show/hide percentage fields based on amc_year
+        if (inv.amc_year !== null && inv.amc_year !== undefined) {
+          // Hide ALL percentage fields including AMC
+          $('#modalSoftwarePercent').closest('.col-md-3').hide();
+          $('#modalCustomizationPercent').closest('.col-md-3').hide();
+          $('#modalIntegrationPercent').closest('.col-md-3').hide();
+          $('#modalAmcPercent').closest('.col-md-3').hide();
+          // Show only the amount field (calculated amount)
+          $('#modalCalculatedAmount').closest('.input-group').parent().show();
+          $('.h').hide(); // Hide the cost percentages label
+        } else {
+          // Show all percentage fields
+          $('#modalSoftwarePercent').closest('.col-md-3').show();
+          $('#modalCustomizationPercent').closest('.col-md-3').show();
+          $('#modalIntegrationPercent').closest('.col-md-3').show();
+          $('#modalAmcPercent').closest('.col-md-3').show();
+          $('#modalCalculatedAmount').closest('.input-group').parent().show();
+          $('.h').show(); // Show the cost percentages label
+        }
+
+        // For AMC invoices, don't populate cost percentages - just show the amount
+        if (inv.amc_year !== null && inv.amc_year !== undefined) {
+          // Clear all percentage fields for AMC invoices
+          $('#modalSoftwarePercent').val('');
+          $('#modalCustomizationPercent').val('');
+          $('#modalIntegrationPercent').val('');
+          $('#modalAmcPercent').val('');
+          // Set the calculated amount to the stored amount
+          $('#modalCalculatedAmount').val(inv.amount);
+        } else {
+          // For non-AMC invoices, populate cost percentages if they exist
+          if (inv.cost_percentages && Object.keys(inv.cost_percentages).length > 0) {
+            $('#modalSoftwarePercent').val(inv.cost_percentages.software_percent || '');
+            $('#modalCustomizationPercent').val(inv.cost_percentages.customization_percent || '');
+            $('#modalIntegrationPercent').val(inv.cost_percentages.integration_percent || '');
+            $('#modalAmcPercent').val(inv.cost_percentages.amc_percent || '');
+          } else {
+            // If no cost_percentages, try to calculate from the stored amount
+            const storedAmount = parseFloat(inv.amount) || 0;
+            // Get costs from the project's custom_costs - this matches how project_form.html works
+            let projectCustomCosts = [];
+            try {
+              // Get the custom_costs data safely using json_script filter
+              const customCostsElement = document.getElementById('custom-costs-data');
+              if (customCostsElement) {
+                console.log('Found custom-costs-data element, textContent:', customCostsElement.textContent);
+                projectCustomCosts = JSON.parse(customCostsElement.textContent || '[]');
+                console.log('Successfully parsed custom_costs:', projectCustomCosts);
+              } else {
+                console.log('custom_costs element not found, using empty array');
+                projectCustomCosts = [];
+              }
+            } catch (e) {
+              console.log('Error parsing custom_costs, using empty array:', e);
+              projectCustomCosts = [];
+            }
+            let softwareCost = 0, customizationCost = 0, integrationCost = 0, amcCost = 0;
+            // Extract costs from custom_costs JSON field
+            projectCustomCosts.forEach(cost => {
+              if (cost.name && cost.name.toLowerCase() === 'software cost') {
+                softwareCost = parseFloat(cost.value) || 0;
+              } else if (cost.name && cost.name.toLowerCase() === 'customization cost') {
+                customizationCost = parseFloat(cost.value) || 0;
+              } else if (cost.name && cost.name.toLowerCase() === 'integration cost') {
+                integrationCost = parseFloat(cost.value) || 0;
+              } else if (cost.name.toLowerCase().includes('amc')) {
+                amcCost = parseFloat(cost.value || cost.amc_cost || 0);
+              }
+            });
+            
+            // console.log('Extracted costs from custom_costs:', { softwareCost, customizationCost, integrationCost, amcCost, projectCustomCosts });
+            
+            if (storedAmount > 0 && (softwareCost > 0 || customizationCost > 0 || integrationCost > 0 || amcCost > 0)) {
+              // Try to estimate percentages based on the stored amount
+              const totalCost = softwareCost + customizationCost + integrationCost + amcCost;
+              if (totalCost > 0) {
+                const estimatedPercent = (storedAmount / totalCost) * 100;
+                $('#modalSoftwarePercent').val(estimatedPercent.toFixed(2));
+                $('#modalCustomizationPercent').val(estimatedPercent.toFixed(2));
+                $('#modalIntegrationPercent').val(estimatedPercent.toFixed(2));
+                $('#modalAmcPercent').val(estimatedPercent.toFixed(2));
+                // console.log('Estimated percentages from stored amount:', estimatedPercent);
+              } else {
+                $('#modalSoftwarePercent').val('');
+                $('#modalCustomizationPercent').val('');
+                $('#modalIntegrationPercent').val('');
+                $('#modalAmcPercent').val('');
+              }
+            } else {
+              $('#modalSoftwarePercent').val('');
+              $('#modalCustomizationPercent').val('');
+              $('#modalIntegrationPercent').val('');
+              $('#modalAmcPercent').val('');
+            }
+          }
+        }
+        
+        // Calculate and display the amount
+        setTimeout(calculateAmount, 100); // Small delay to ensure fields are populated
+        
+        $('#modalTaxRate').val(inv.tax_rate || 0);
+        $('#modalDueDate').val(inv.due_date);
+        $('#invoiceEditModal').modal('show');
+      });
+      // Delete invoice button handler
+      $('#invoicesTable').on('click', '.delete-invoice', function() {
+        const idx = $(this).data('idx');
+        window.invoices.splice(idx, 1);
+        // Re-sort by due date and keep existing invoice numbers (no re-numbering)
+        window.invoices.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+        renderInvoicesTable();
+      });
+      
+      // Export individual invoice button handler
+      $('#invoicesTable').on('click', '.export-invoice', function() {
+        const idx = $(this).data('idx');
+        const invoice = window.invoices[idx];
+        
+        // Check if invoice has been saved to database by checking if it has a database ID
+        // New invoices won't have an 'id' field until they're saved
+        if (!invoice.id) {
+          alert('Please save the invoice first before exporting. Click the Save button to save your changes.');
+          return;
+        }
+        
+        // Export single invoice
+        exportSingleInvoice(invoice);
+      });
+      
+
+    });
+    
+    // Function to export a single invoice
+    function exportSingleInvoice(invoice) {
+      // Show loading state
+      const $btn = $(`.export-invoice[data-idx="${window.invoices.indexOf(invoice)}"]`);
+      const originalHtml = $btn.html();
+      $btn.html('<i class="fa fa-spinner fa-spin"></i>');
+      $btn.prop('disabled', true);
+      
+      // Make AJAX request to download single invoice
+      $.ajax({
+        url: `/projects/${window.projectId}/download-invoices/`,
+        method: 'POST',
+        data: {
+          export_type: 'selected',
+          format: 'word',
+          selected_invoices: [window.invoices.indexOf(invoice)],
+          csrfmiddlewaretoken: window.csrfToken
+        },
+        traditional: true,
+        xhrFields: {
+          responseType: 'blob'
+        },
+        success: function(data, status, xhr) {
+          // Create download link
+          const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `invoice_${window.projectId}_${invoice.invoice_no.replace(/[^a-zA-Z0-9-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.docx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          // Reset button
+          $btn.html(originalHtml);
+          $btn.prop('disabled', false);
+        },
+        error: function(xhr, status, error) {
+          alert('Error generating invoice: ' + error);
+          $btn.html(originalHtml);
+          $btn.prop('disabled', false);
+        }
+      });
+    }
+    
+
+    // --- Project Invoices Table Logic ---
+    let editingInvoiceIdx = null;
+    // Invoices are now ordered by due_date instead of invoice_no
+    // Percentages for net_amount calculation
+    let percentages = {
+      software: parseFloat('{{ project.partner.software_cost|default:0 }}'),
+      customization: parseFloat('{{ project.partner.customization_cost|default:0 }}'),
+      integration: parseFloat('{{ project.partner.integration_cost|default:0 }}'),
+      amc: parseFloat('{{ project.partner.amc_cost|default:0 }}')
+    };
+    function renderInvoicesTable() {
+      const $tbody = $('#invoicesTable tbody');
+      $tbody.empty();
+      let totalAmount = 0;
+      // console.log('Rendering invoices table with data:', window.invoices);
+      for (let i = 0; i < window.invoices.length; i++) {
+        const inv = window.invoices[i];
+        console.log(`Invoice ${i}:`, inv);
+        console.log(`Invoice ${i} tax_rate:`, inv.tax_rate, 'type:', typeof inv.tax_rate);
+        totalAmount += parseFloat(inv.amount) || 0;
+        // Determine type label
+        let typeLabel = inv.payment_type === 'custom'
+          ? (inv.custom_type || 'Custom')
+          : (inv.payment_type === 'software' ? 'Software Cost'
+            : inv.payment_type === 'customization' ? 'Customization Cost'
+            : inv.payment_type === 'integration' ? 'Integration Cost'
+            : inv.payment_type === 'amc' && inv.amc_year ? `AMC (Year ${inv.amc_year})` : inv.payment_type);
+        let isAuto = inv.auto === true;
+        
+                // Just use the stored net_amount from the database
+        const netAmount = parseFloat(inv.net_amount) || 0;
+        let partnerStatus = typeof inv.partner_status !== 'undefined' ? inv.partner_status : 'scheduled';
+        let partnerStatusDisabled = inv.status !== 'paid' ? 'disabled' : '';
+        let row = `<tr>
+          <td style="width: 7%;"><input type='text' class='form-control form-control-sm invoice-no' data-idx='${i}' value='${inv.invoice_no}' readonly></td>
+          <td style="width: 15%; overflow-x:auto">${typeLabel}</td>
+          <td style="width: 11%;"><input type='number' class='form-control form-control-sm amount' data-idx='${i}' value='${inv.amount}'></td>
+          <td style="width: 11%;"><input type='number' class='form-control form-control-sm net-amount' data-idx='${i}' value='${netAmount.toFixed(2)}' readonly></td>
+          <td style="width: 10%;"><input type='number' class='form-control form-control-sm tax-rate' data-idx='${i}' value='${inv.tax_rate || 0}' min="0" max="100" step="0.01"></td>
+          <td style="width: 10%;">
+            <select class='form-select form-select-sm status' data-idx='${i}'>
+              <option value='due'${inv.status === 'due' ? ' selected' : ''}>Due</option>
+              <option value='paid'${inv.status === 'paid' ? ' selected' : ''}>Paid</option>
+              <option value='scheduled'${inv.status === 'scheduled' ? ' selected' : ''}>Scheduled</option>
+              <option value='custom'${inv.status === 'custom' ? ' selected' : ''}>Custom</option>
+            </select>
+          </td>
+          <td style="width: 10%;">
+            <select class='form-select form-control-sm partner-status' data-idx='${i}' ${partnerStatusDisabled}>
+              <option value='due'${partnerStatus === 'due' ? ' selected' : ''}>Due</option>
+              <option value='paid'${partnerStatus === 'paid' ? ' selected' : ''}>Paid</option>
+              <option value='scheduled'${partnerStatus === 'scheduled' ? ' selected' : ''}>Scheduled</option>
+              <option value='custom'${partnerStatus === 'custom' ? ' selected' : ''}>Custom</option>
+            </select>
+          </td>
+          <td style="width: 12%;"><input type='date' class='form-control form-control-sm due-date' data-idx='${i}' value='${inv.due_date}'></td>
+          <td style="width: 14%;">
+            <button type='button' class='action-btn edit-invoice' data-idx='${i}' title='Edit'><i class='fa fa-edit'></i></button>
+            <button type='button' class='action-btn delete delete-invoice' data-idx='${i}' title='Delete'><i class='fa fa-trash'></i></button>
+            <button type='button' class='action-btn export export-invoice' data-idx='${i}' title='${!inv.id ? 'Save invoice first to export' : 'Export Invoice'}' ${!inv.id ? 'disabled' : ''}><i class='fa fa-download'></i></button>
+          </td>
+        </tr>`;
+        $tbody.append(row);
+      }
+      // Update total
+      $('#invoiceTotalAmount').text(totalAmount.toLocaleString());
+      // Remove pagination controls
+      $('#invoicePagination').html('');
+    }
+    // Inline editing handlers
+    $('#invoicesTable').on('input', '.amount', function() {
+      const idx = $(this).data('idx');
+      window.invoices[idx].amount = parseFloat($(this).val()) || 0;
+      
+      let inv = window.invoices[idx];
+      let netAmount = parseFloat(inv.amount) || 0;
+      
+      // Check if this is an AMC invoice
+      if (inv.amc_year !== null && inv.amc_year !== undefined) {
+        // For AMC invoices, use simple partner percentage calculation
+        const partnerAmcPercent = parseFloat('{{ project.partner.amc_cost|default:0 }}') || 0;
+        inv.net_amount = netAmount * (1 - (partnerAmcPercent / 100));
+      } else if (inv.cost_percentages && Object.keys(inv.cost_percentages).length > 0) {
+        // For new combined cost invoices, calculate actual partner deduction
+        const partnerSoftwarePercent = parseFloat('{{ project.partner.software_cost|default:0 }}') || 0;
+        const partnerCustomizationPercent = parseFloat('{{ project.partner.customization_cost|default:0 }}') || 0;
+        const partnerIntegrationPercent = parseFloat('{{ project.partner.integration_cost|default:0 }}') || 0;
+        const partnerAmcPercent = parseFloat('{{ project.partner.amc_cost|default:0 }}') || 0;
+        
+        // Get project costs from the project's custom_costs
+        let projectCustomCosts = [];
+        try {
+          const customCostsElement = document.getElementById('custom-costs-data');
+          if (customCostsElement) {
+            projectCustomCosts = JSON.parse(customCostsElement.textContent || '[]');
+          }
+        } catch (e) {
+          projectCustomCosts = [];
+        }
+        
+        let softwareCost = 0, customizationCost = 0, integrationCost = 0, amcCost = 0;
+        projectCustomCosts.forEach(cost => {
+          if (cost.name && cost.name.toLowerCase() === 'software cost') {
+            softwareCost = parseFloat(cost.value) || 0;
+          } else if (cost.name && cost.name.toLowerCase() === 'customization cost') {
+            customizationCost = parseFloat(cost.value) || 0;
+          } else if (cost.name && cost.name.toLowerCase() === 'integration cost') {
+            integrationCost = parseFloat(cost.value) || 0;
+          } else if (cost.name.toLowerCase().includes('amc')) {
+            amcCost = parseFloat(cost.value || cost.amc_cost || 0);
+          }
+        });
+        
+        // Calculate the actual partner deduction based on cost amounts
+        let totalPartnerDeduction = 0;
+        if (inv.cost_percentages.software_percent > 0 && softwareCost > 0) {
+          const softwareAmount = (inv.cost_percentages.software_percent / 100) * softwareCost;
+          totalPartnerDeduction += (softwareAmount * partnerSoftwarePercent) / 100;
+        }
+        if (inv.cost_percentages.customization_percent > 0 && customizationCost > 0) {
+          const customizationAmount = (inv.cost_percentages.customization_percent / 100) * customizationCost;
+          totalPartnerDeduction += (customizationAmount * partnerCustomizationPercent) / 100;
+        }
+        if (inv.cost_percentages.integration_percent > 0 && integrationCost > 0) {
+          const integrationAmount = (inv.cost_percentages.integration_percent / 100) * integrationCost;
+          totalPartnerDeduction += (integrationAmount * partnerIntegrationPercent) / 100;
+        }
+        if (inv.cost_percentages.amc_percent > 0 && amcCost > 0) {
+          const amcAmount = (inv.cost_percentages.amc_percent / 100) * amcCost;
+          totalPartnerDeduction += (amcAmount * partnerAmcPercent) / 100;
+        }
+        
+        inv.net_amount = netAmount - totalPartnerDeduction;
+      } else {
+        // For old invoices, use the old percentage logic
+        let percentage = typeof inv.percentage !== 'undefined' ? inv.percentage : (percentages[inv.payment_type] || 0);
+        inv.net_amount = netAmount * (1 - (percentage / 100));
+      }
+      
+      // Re-render the table to show updated net amount
+      renderInvoicesTable();
+    });
+    $('#invoicesTable').on('change', '.status', function() {
+      const idx = $(this).data('idx');
+      window.invoices[idx].status = $(this).val();
+      // Enable/disable partner-status select in the same row
+      const $row = $(this).closest('tr');
+      if ($(this).val() === 'paid') {
+        $row.find('.partner-status').prop('disabled', false);
+      } else {
+        $row.find('.partner-status').prop('disabled', true).val('scheduled');
+        window.invoices[idx].partner_status = 'scheduled';
+      }
+      renderInvoicesTable();
+    });
+    $('#invoicesTable').on('change', '.due-date', function() {
+      const idx = $(this).data('idx');
+      window.invoices[idx].due_date = $(this).val();
+      renderInvoicesTable();
+    });
+    
+    $('#invoicesTable').on('input', '.tax-rate', function() {
+      const idx = $(this).data('idx');
+      window.invoices[idx].tax_rate = parseFloat($(this).val()) || 0;
+      console.log('Tax rate updated for invoice', idx, 'to:', window.invoices[idx].tax_rate);
+      // Don't re-render the table here as it causes the input to lose focus
+    });
+    
+    $('#invoicesTable').on('change', '.partner-status', function() {
+      const idx = $(this).data('idx');
+      if (window.invoices[idx].status === 'paid') {
+        window.invoices[idx].partner_status = $(this).val();
+      }
+      renderInvoicesTable();
+    });
+    $('#saveInvoiceBtn').off('click').on('click', function() {
+      const form = document.getElementById('invoiceEditForm');
+      if (!form.checkValidity()) {
+        $(form).addClass('was-validated');
+        return;
+      }
+      
+      // Check if this is a new invoice (editing existing invoices keep their numbers)
+      const isNewInvoice = editingInvoiceIdx === window.invoices.length;
+      
+      if (isNewInvoice) {
+        // Generate invoice number only for new invoices
+        generateInvoiceNumber(window.partnerName, function(generatedInvoiceNo) {
+          saveInvoiceWithNumber(generatedInvoiceNo);
+        });
+      } else {
+        // For editing existing invoices, keep the existing number
+        const existingInvoiceNo = window.invoices[editingInvoiceIdx].invoice_no;
+        saveInvoiceWithNumber(existingInvoiceNo);
+      }
+    });
+    
+    function saveInvoiceWithNumber(invoice_no) {
+      const description = $('#modalDescription').val();
+      const amount = parseFloat($('#modalCalculatedAmount').val()) || 0;
+      const status = 'scheduled'; // Always set to scheduled for new invoices
+      const custom_status = '';
+      const partner_status = 'scheduled'; // Always set to scheduled for new invoices
+      const due_date = $('#modalDueDate').val();
+      const tax_rate = parseFloat($('#modalTaxRate').val()) || 0;
+      
+      // Check if this is an AMC invoice (editing existing AMC invoice)
+      const isAmcInvoice = editingInvoiceIdx !== null && editingInvoiceIdx !== window.invoices.length && 
+                          window.invoices[editingInvoiceIdx] && window.invoices[editingInvoiceIdx].amc_year !== null;
+      
+      // Set payment_type based on whether it's an AMC invoice
+      const payment_type = isAmcInvoice ? 'amc' : (description || 'Implementation Fee');
+      
+      let costPercentages = {};
+      let net_amount = amount;
+      
+      if (isAmcInvoice) {
+        // For AMC invoices, don't use cost breakdown - use simple partner percentage
+        const partnerAmcPercent = parseFloat('{{ project.partner.amc_cost|default:0 }}') || 0;
+        net_amount = amount * (1 - (partnerAmcPercent / 100));
+        // Keep cost_percentages empty for AMC invoices
+        costPercentages = {};
+      } else {
+        // For non-AMC invoices, use the cost breakdown logic
+        costPercentages = {
+          software_percent: parseFloat($('#modalSoftwarePercent').val()) || 0,
+          customization_percent: parseFloat($('#modalCustomizationPercent').val()) || 0,
+          integration_percent: parseFloat($('#modalIntegrationPercent').val()) || 0,
+          amc_percent: parseFloat($('#modalAmcPercent').val()) || 0
+        };
+        
+        // Calculate net amount by deducting partner percentages
+        // Get partner percentages from the project context
+        const partnerSoftwarePercent = parseFloat('{{ project.partner.software_cost|default:0 }}') || 0;
+        const partnerCustomizationPercent = parseFloat('{{ project.partner.customization_cost|default:0 }}') || 0;
+        const partnerIntegrationPercent = parseFloat('{{ project.partner.integration_cost|default:0 }}') || 0;
+        const partnerAmcPercent = parseFloat('{{ project.partner.amc_cost|default:0 }}') || 0;
+        
+        // Get project costs from the project's custom_costs
+        let projectCustomCosts = [];
+        try {
+          const customCostsElement = document.getElementById('custom-costs-data');
+          if (customCostsElement) {
+            projectCustomCosts = JSON.parse(customCostsElement.textContent || '[]');
+          }
+        } catch (e) {
+          // console.log('Error parsing custom_costs, using empty array:', e);
+          projectCustomCosts = [];
+        }
+        
+        let softwareCost = 0, customizationCost = 0, integrationCost = 0, amcCost = 0;
+        projectCustomCosts.forEach(cost => {
+          if (cost.name && cost.name.toLowerCase() === 'software cost') {
+            softwareCost = parseFloat(cost.value) || 0;
+          } else if (cost.name && cost.name.toLowerCase() === 'customization cost') {
+            customizationCost = parseFloat(cost.value) || 0;
+          } else if (cost.name && cost.name.toLowerCase() === 'integration cost') {
+            integrationCost = parseFloat(cost.value) || 0;
+          } else if (cost.name.toLowerCase().includes('amc')) {
+            amcCost = parseFloat(cost.value || cost.amc_cost || 0);
+          }
+        });
+        
+        // Calculate the actual partner deduction based on cost amounts
+        let totalPartnerDeduction = 0;
+        if (costPercentages.software_percent > 0 && softwareCost > 0) {
+          const softwareAmount = (costPercentages.software_percent / 100) * softwareCost;
+          totalPartnerDeduction += (softwareAmount * partnerSoftwarePercent) / 100;
+        }
+        if (costPercentages.customization_percent > 0 && customizationCost > 0) {
+          const customizationAmount = (costPercentages.customization_percent / 100) * customizationCost;
+          totalPartnerDeduction += (customizationAmount * partnerCustomizationPercent) / 100;
+        }
+        if (costPercentages.integration_percent > 0 && integrationCost > 0) {
+          const integrationAmount = (costPercentages.integration_percent / 100) * integrationCost;
+          totalPartnerDeduction += (integrationAmount * partnerIntegrationPercent) / 100;
+        }
+        if (costPercentages.amc_percent > 0 && amcCost > 0) {
+          const amcAmount = (costPercentages.amc_percent / 100) * amcCost;
+          totalPartnerDeduction += (amcAmount * partnerAmcPercent) / 100;
+        }
+        
+        // Calculate net amount by deducting the actual partner deduction
+        net_amount = amount - totalPartnerDeduction;
+      }
+      
+      console.log('Net amount calculation:', {
+        amount,
+        costPercentages,
+        isAmcInvoice,
+        net_amount
+      });
+      
+      // Create the invoice object
+      const invoiceData = { 
+        invoice_no, 
+        description, 
+        payment_type, 
+        amount, 
+        net_amount, 
+        status, 
+        custom_status, 
+        partner_status, 
+        due_date,
+        tax_rate,
+        cost_percentages: costPercentages
+      };
+      
+      // Preserve amc_year for AMC invoices
+      if (isAmcInvoice) {
+        invoiceData.amc_year = window.invoices[editingInvoiceIdx].amc_year;
+        invoiceData.auto = window.invoices[editingInvoiceIdx].auto || false;
+      }
+      
+      if (editingInvoiceIdx === window.invoices.length) {
+        window.invoices.push(invoiceData);
+      } else if (editingInvoiceIdx !== null) {
+        window.invoices[editingInvoiceIdx] = invoiceData;
+      }
+      // Re-sort by due date and keep existing invoice numbers (no re-numbering)
+      window.invoices.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+      renderInvoicesTable();
+      $('#invoiceEditModal').modal('hide');
+      editingInvoiceIdx = null;
+    }
+    // Calculate amount based on percentages
+    function calculateAmount() {
+      // Check if this is an AMC invoice being edited
+      const isAmcInvoice = editingInvoiceIdx !== null && editingInvoiceIdx !== window.invoices.length && 
+                          window.invoices[editingInvoiceIdx] && window.invoices[editingInvoiceIdx].amc_year !== null;
+      
+      if (isAmcInvoice) {
+        // For AMC invoices, don't recalculate - the amount is already set correctly
+        return;
+      }
+      
+      const softwarePercent = parseFloat($('#modalSoftwarePercent').val()) || 0;
+      const customizationPercent = parseFloat($('#modalCustomizationPercent').val()) || 0;
+      const integrationPercent = parseFloat($('#modalIntegrationPercent').val()) || 0;
+      const amcPercent = parseFloat($('#modalAmcPercent').val()) || 0;
+      
+      // Fetch project costs via AJAX to calculate proper amounts
+      if (window.projectId) {
+        $.ajax({
+          url: `/projects/${window.projectId}/get-costs/`,
+          method: 'GET',
+          success: function(data) {
+            const softwareCost = parseFloat(data.software_cost) || 0;
+            const customizationCost = parseFloat(data.customization_cost) || 0;
+            const integrationCost = parseFloat(data.integration_cost) || 0;
+            const amcCost = parseFloat(data.amc_cost) || 0;
+            
+            // Calculate total amount based on percentages of actual costs
+            const totalAmount = (softwareCost * softwarePercent / 100) + 
+                               (customizationCost * customizationPercent / 100) + 
+                               (integrationCost * integrationPercent / 100) + 
+                               (amcCost * amcPercent / 100);
+            
+            $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+          },
+          error: function() {
+            // Fallback to reading from custom-costs-data if AJAX fails
+            let projectCustomCosts = [];
+            try {
+              const customCostsElement = document.getElementById('custom-costs-data');
+              if (customCostsElement) {
+                projectCustomCosts = JSON.parse(customCostsElement.textContent || '[]');
+              }
+            } catch (e) {
+              projectCustomCosts = [];
+            }
+            
+            let softwareCost = 0, customizationCost = 0, integrationCost = 0, amcCost = 0;
+            
+            // Extract costs from custom_costs JSON field with updated AMC logic
+            projectCustomCosts.forEach(cost => {
+              if (cost.name && cost.name.toLowerCase() === 'software cost') {
+                softwareCost = parseFloat(cost.value) || 0;
+              } else if (cost.name && cost.name.toLowerCase() === 'customization cost') {
+                customizationCost = parseFloat(cost.value) || 0;
+              } else if (cost.name && cost.name.toLowerCase() === 'integration cost') {
+                integrationCost = parseFloat(cost.value) || 0;
+              } else if (cost.name.toLowerCase().includes('amc')) {
+                amcCost = parseFloat(cost.value || cost.amc_cost || 0);
+              }
+            });
+            
+            // Calculate total amount based on percentages
+            const totalAmount = (softwareCost * softwarePercent / 100) + 
+                               (customizationCost * customizationPercent / 100) + 
+                               (integrationCost * integrationPercent / 100) +
+                               (amcCost * amcPercent / 100);
+            
+            $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+          }
+        });
+      } else {
+        // Fallback to reading from custom-costs-data if no project ID
+        let projectCustomCosts = [];
+        try {
+          const customCostsElement = document.getElementById('custom-costs-data');
+          if (customCostsElement) {
+            projectCustomCosts = JSON.parse(customCostsElement.textContent || '[]');
+          }
+        } catch (e) {
+          projectCustomCosts = [];
+        }
+        
+        let softwareCost = 0, customizationCost = 0, integrationCost = 0, amcCost = 0;
+        
+        // Extract costs from custom_costs JSON field with updated AMC logic
+        projectCustomCosts.forEach(cost => {
+          if (cost.name && cost.name.toLowerCase() === 'software cost') {
+            softwareCost = parseFloat(cost.value) || 0;
+          } else if (cost.name && cost.name.toLowerCase() === 'customization cost') {
+            customizationCost = parseFloat(cost.value) || 0;
+          } else if (cost.name && cost.name.toLowerCase() === 'integration cost') {
+            integrationCost = parseFloat(cost.value) || 0;
+          } else if (cost.name.toLowerCase().includes('amc')) {
+            amcCost = parseFloat(cost.value || cost.amc_cost || 0);
+          }
+        });
+        
+        // Calculate total amount based on percentages
+        const totalAmount = (softwareCost * softwarePercent / 100) + 
+                           (customizationCost * customizationPercent / 100) + 
+                           (integrationCost * integrationPercent / 100) +
+                           (amcCost * amcPercent / 100);
+        
+        $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+      }
+    }
+
+    // Add event listeners for percentage changes
+    $('#modalSoftwarePercent, #modalCustomizationPercent, #modalIntegrationPercent, #modalAmcPercent').on('input', calculateAmount);
+
+    // Update table header to use 'Due'
+    $(document).ready(function() {
+      $('#invoicesTable thead tr').html(`
+        <th style="width: 7%; min-width: 60px;">Inv#</th>
+        <th style="width: 15%; min-width: 140px;">Type</th>
+        <th style="width: 11%; min-width: 100px;">Amount</th>
+        <th style="width: 11%; min-width: 100px;">Net Amount</th>
+        <th style="width: 10%; min-width: 100px;">Tax Rate</th>
+        <th style="width: 10%; min-width: 100px;">Status</th>
+        <th style="width: 10%; min-width: 100px;">Partner Status</th>
+        <th style="width: 12%; min-width: 120px;">Due</th>
+        <th style="width: 14%; min-width: 120px;">Actions</th>
+      `);
+    });
+    // Function to capture all current values from table rows
+    function captureTableData() {
+      const updatedInvoices = [];
+      console.log('Capturing table data...');
+      
+      $('#invoicesTable tbody tr').each(function(index) {
+        const $row = $(this);
+        const idx = $row.find('.invoice-no').data('idx');
+        const originalInvoice = window.invoices[idx];
+        
+        if (originalInvoice) {
+          // Capture all current values from the table row
+          const taxRateInput = $row.find('.tax-rate');
+          console.log(`Invoice ${idx}: tax-rate input found:`, taxRateInput.length > 0);
+          console.log(`Invoice ${idx}: tax-rate input element:`, taxRateInput[0]);
+          console.log(`Invoice ${idx}: tax-rate input value:`, taxRateInput.val());
+          
+          // Get the raw string value and convert to number with proper precision
+          const taxRateString = taxRateInput.val();
+          // Convert to number but preserve the exact value
+          const taxRateValue = taxRateString ? +taxRateString : 0;
+          console.log(`Invoice ${idx}: tax_rate from table: ${taxRateValue}, original: ${originalInvoice.tax_rate}, raw string: "${taxRateString}"`);
+          
+          const updatedInvoice = {
+            ...originalInvoice,
+            amount: parseFloat($row.find('.amount').val()) || 0,
+            tax_rate: taxRateValue,
+            status: $row.find('.status').val(),
+            partner_status: $row.find('.partner-status').val(),
+            due_date: $row.find('.due-date').val()
+          };
+          
+          // Recalculate net amount if amount changed
+          if (updatedInvoice.amount !== originalInvoice.amount) {
+            // Check if this is an AMC invoice
+            if (updatedInvoice.amc_year !== null && updatedInvoice.amc_year !== undefined) {
+              // For AMC invoices, use simple partner percentage calculation
+              const partnerAmcPercent = parseFloat('{{ project.partner.amc_cost|default:0 }}') || 0;
+              updatedInvoice.net_amount = updatedInvoice.amount * (1 - (partnerAmcPercent / 100));
+            } else if (updatedInvoice.cost_percentages && Object.keys(updatedInvoice.cost_percentages).length > 0) {
+              // For new combined cost invoices, calculate actual partner deduction
+              const partnerSoftwarePercent = parseFloat('{{ project.partner.software_cost|default:0 }}') || 0;
+              const partnerCustomizationPercent = parseFloat('{{ project.partner.customization_cost|default:0 }}') || 0;
+              const partnerIntegrationPercent = parseFloat('{{ project.partner.integration_cost|default:0 }}') || 0;
+              const partnerAmcPercent = parseFloat('{{ project.partner.amc_cost|default:0 }}') || 0;
+              
+              // Get project costs from the project's custom_costs
+              let projectCustomCosts = [];
+              try {
+                const customCostsElement = document.getElementById('custom-costs-data');
+                if (customCostsElement) {
+                  projectCustomCosts = JSON.parse(customCostsElement.textContent || '[]');
+                }
+              } catch (e) {
+                projectCustomCosts = [];
+              }
+              
+              let softwareCost = 0, customizationCost = 0, integrationCost = 0, amcCost = 0;
+              projectCustomCosts.forEach(cost => {
+                if (cost.name && cost.name.toLowerCase() === 'software cost') {
+                  softwareCost = parseFloat(cost.value) || 0;
+                } else if (cost.name && cost.name.toLowerCase() === 'customization cost') {
+                  customizationCost = parseFloat(cost.value) || 0;
+                } else if (cost.name && cost.name.toLowerCase() === 'integration cost') {
+                  integrationCost = parseFloat(cost.value) || 0;
+                } else if (cost.name.toLowerCase().includes('amc')) {
+                  amcCost = parseFloat(cost.value || cost.amc_cost || 0);
+                }
+              });
+              
+              // Calculate the actual partner deduction based on cost amounts
+              let totalPartnerDeduction = 0;
+              if (updatedInvoice.cost_percentages.software_percent > 0 && softwareCost > 0) {
+                const softwareAmount = (updatedInvoice.cost_percentages.software_percent / 100) * softwareCost;
+                totalPartnerDeduction += (softwareAmount * partnerSoftwarePercent) / 100;
+              }
+              if (updatedInvoice.cost_percentages.customization_percent > 0 && customizationCost > 0) {
+                const customizationAmount = (updatedInvoice.cost_percentages.customization_percent / 100) * customizationCost;
+                totalPartnerDeduction += (customizationAmount * partnerCustomizationPercent) / 100;
+              }
+              if (updatedInvoice.cost_percentages.integration_percent > 0 && integrationCost > 0) {
+                const integrationAmount = (updatedInvoice.cost_percentages.integration_percent / 100) * integrationCost;
+                totalPartnerDeduction += (integrationAmount * partnerIntegrationPercent) / 100;
+              }
+              if (updatedInvoice.cost_percentages.amc_percent > 0 && amcCost > 0) {
+                const amcAmount = (updatedInvoice.cost_percentages.amc_percent / 100) * amcCost;
+                totalPartnerDeduction += (amcAmount * partnerAmcPercent) / 100;
+              }
+              
+              updatedInvoice.net_amount = updatedInvoice.amount - totalPartnerDeduction;
+            } else {
+              // For old invoices, use the old percentage logic
+              let percentage = typeof updatedInvoice.percentage !== 'undefined' ? updatedInvoice.percentage : (percentages[updatedInvoice.payment_type] || 0);
+              updatedInvoice.net_amount = updatedInvoice.amount * (1 - (percentage / 100));
+            }
+          }
+          
+          updatedInvoices.push(updatedInvoice);
+        }
+      });
+      
+      return updatedInvoices;
+    }
+    
+    // Test function to debug tax rate capture
+    window.testCapture = function() {
+      console.log('Testing capture function...');
+      
+      // Check what elements exist in the table
+      console.log('Total rows in table:', $('#invoicesTable tbody tr').length);
+      console.log('All tax-rate inputs:', $('.tax-rate').length);
+      console.log('All tax-rate inputs with values:', $('.tax-rate').map(function() { return $(this).val(); }).get());
+      
+      const updatedInvoices = captureTableData();
+      console.log('Captured invoices:', updatedInvoices);
+      
+      // Also check what's in the table directly
+      $('#invoicesTable tbody tr').each(function(index) {
+        const $row = $(this);
+        const idx = $row.find('.invoice-no').data('idx');
+        const taxRateInput = $row.find('.tax-rate');
+        console.log(`Row ${index}, Invoice ${idx}: tax-rate input value:`, taxRateInput.val());
+        console.log(`Row ${index}, Invoice ${idx}: tax-rate input element:`, taxRateInput[0]);
+      });
+    };
+    
+    // Before form submit, capture table data and serialize invoices to hidden input
+    $('form').on('submit', function(event) {
+      // Capture all current values from table rows
+      const updatedInvoices = captureTableData();
+      console.log('Form submission - updated invoices:', updatedInvoices);
+      
+      // Debug: Check tax_rate values specifically
+      updatedInvoices.forEach((inv, idx) => {
+        console.log(`Invoice ${idx} tax_rate before JSON:`, inv.tax_rate, 'type:', typeof inv.tax_rate);
+      });
+      
+      const jsonData = JSON.stringify(updatedInvoices || []);
+      console.log('JSON data being sent:', jsonData);
+      $('#id_invoices').val(jsonData);
+    });
+    
+    $('#invoicesTable').on('change', '.partner-status', function() {
+      const idx = $(this).data('idx');
+      if (window.invoices[idx].status === 'paid') {
+        window.invoices[idx].partner_status = $(this).val();
+      }
+      renderInvoicesTable();
+    });
+  </script>
+{% endblock %}

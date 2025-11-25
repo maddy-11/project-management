@@ -1,0 +1,164 @@
+{% extends 'clients/home.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container my-5">
+  <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+    <div class="card-header py-3 bg-light">
+      <div class="d-flex align-items-center justify-content-between">
+        <h2 class="h5 mb-0 fw-bold">
+          <i class="fa-solid fa-handshake me-2"></i> 
+          {{ form.instance.pk|yesno:"Edit Partner,Add New Partner" }}
+        </h2>
+        <a href="{% url 'partner-list' %}" class="btn btn-sm btn-light">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+    </div>
+    
+    <form method="post" class="card-body">
+      {% csrf_token %}
+      
+      <!-- Main Information Section -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-id-card me-2"></i>Basic Information
+        </h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="id_name" class="form-label fw-medium" style="color: #555;">
+              Name {% if form.fields.name.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.name class="form-control" placeholder="Enter partner name" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="id_type" class="form-label fw-medium" style="color: #555;">
+              Type {% if form.fields.type.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.type class="form-select" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.type.errors %}<div class="invalid-feedback d-block">{{ form.type.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Information Section -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-address-book me-2"></i>Contact Details
+        </h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="id_email" class="form-label fw-medium" style="color: #555;">
+              Email {% if form.fields.email.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.email class="form-control" placeholder="partner@example.com" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="id_phone" class="form-label fw-medium" style="color: #555;">
+              Phone {% if form.fields.phone.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.phone class="form-control" placeholder="+1234567890" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.phone.errors %}<div class="invalid-feedback d-block">{{ form.phone.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-12">
+            <label for="id_address" class="form-label fw-medium" style="color: #555;">
+              Address {% if form.fields.address.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.address class="form-control" rows="2" placeholder="Full address" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.address.errors %}<div class="invalid-feedback d-block">{{ form.address.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="id_bank_account" class="form-label fw-medium" style="color: #555;">
+              Bank Account
+            </label>
+            {% render_field form.bank_account class="form-select" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.bank_account.errors %}<div class="invalid-feedback d-block">{{ form.bank_account.errors }}</div>{% endif %}
+            <div class="form-text text-muted">Select a bank account for this partner (optional)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pricing Structure Section -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-percent me-2"></i>Pricing Structure
+        </h5>
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label for="id_software_cost" class="form-label fw-medium" style="color: #555;">
+              Software Cost {% if form.fields.software_cost.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <div class="input-group">
+              {% render_field form.software_cost class="form-control" placeholder="0.00" style="border-radius: 8px 0 0 8px; border: 1px solid #e0e0e0;" %}
+              <span class="input-group-text" style="border-radius: 0 8px 8px 0; background-color: #f8f9fa; color: #555;">%</span>
+            </div>
+            {% if form.software_cost.errors %}<div class="invalid-feedback d-block">{{ form.software_cost.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-3">
+            <label for="id_customization_cost" class="form-label fw-medium" style="color: #555;">
+              Customization {% if form.fields.customization_cost.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <div class="input-group">
+              {% render_field form.customization_cost class="form-control" placeholder="0.00" style="border-radius: 8px 0 0 8px; border: 1px solid #e0e0e0;" %}
+              <span class="input-group-text" style="border-radius: 0 8px 8px 0; background-color: #f8f9fa; color: #555;">%</span>
+            </div>
+            {% if form.customization_cost.errors %}<div class="invalid-feedback d-block">{{ form.customization_cost.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-3">
+            <label for="id_integration_cost" class="form-label fw-medium" style="color: #555;">
+              Integration {% if form.fields.integration_cost.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <div class="input-group">
+              {% render_field form.integration_cost class="form-control" placeholder="0.00" style="border-radius: 8px 0 0 8px; border: 1px solid #e0e0e0;" %}
+              <span class="input-group-text" style="border-radius: 0 8px 8px 0; background-color: #f8f9fa; color: #555;">%</span>
+            </div>
+            {% if form.integration_cost.errors %}<div class="invalid-feedback d-block">{{ form.integration_cost.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-3">
+            <label for="id_amc_cost" class="form-label fw-medium" style="color: #555;">
+              AMC {% if form.fields.amc_cost.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            <div class="input-group">
+              {% render_field form.amc_cost class="form-control" placeholder="0.00" style="border-radius: 8px 0 0 8px; border: 1px solid #e0e0e0;" %}
+              <span class="input-group-text" style="border-radius: 0 8px 8px 0; background-color: #f8f9fa; color: #555;">%</span>
+            </div>
+            {% if form.amc_cost.errors %}<div class="invalid-feedback d-block">{{ form.amc_cost.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Information -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-note-sticky me-2"></i>Additional Information
+        </h5>
+        <div class="row">
+          <div class="col-12">
+            <label for="id_info" class="form-label fw-medium" style="color: #555;">Notes</label>
+            {% render_field form.info class="form-control" rows="3" placeholder="Any additional information about this partner..." style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.info.errors %}<div class="invalid-feedback d-block">{{ form.info.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="mt-4 d-flex justify-content-end gap-3 border-top pt-4">
+        <a href="{% url 'partner-list' %}" class="btn btn-secondary" style="border-radius: 8px; background-color: #6c757d; border-color: #6c757d;">
+          Cancel
+        </a>
+        <button type="submit" class="btn px-4 text-white" style="border-radius: 8px; background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%); border: none;">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Save Partner
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'clients/home.html' %}
+{% load widget_tweaks %}
+{% load static %}
+{% block content %}
+<div class="container my-5">
+  <div class="card shadow-sm p-4 mx-auto">
+    <h2 class="text-center text-dark mb-4">
+      <i class="fa fa-user-circle"></i> Edit Company Profile
+    </h2>
+    <hr>
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_name" class="form-label">Company Name<span class="text-danger">*</span></label>
+        {{ form.name|add_class:"form-control" }}
+        {% if form.name.errors %}
+          <div class="text-danger small">{{ form.name.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_email" class="form-label">Email</label>
+        {{ form.email|add_class:"form-control" }}
+        {% if form.email.errors %}
+          <div class="text-danger small">{{ form.email.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_phone" class="form-label">Phone</label>
+        {{ form.phone|add_class:"form-control" }}
+        {% if form.phone.errors %}
+          <div class="text-danger small">{{ form.phone.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_bio" class="form-label">About / Bio</label>
+        {{ form.bio|add_class:"form-control" }}
+        {% if form.bio.errors %}
+          <div class="text-danger small">{{ form.bio.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label for="id_logo" class="form-label">Company Logo</label>
+        {{ form.logo|add_class:"form-control" }}
+        {% if form.logo.errors %}
+          <div class="text-danger small">{{ form.logo.errors }}</div>
+        {% endif %}
+      </div>
+
+      {% if form.instance.logo %}
+        <div class="text-center mb-3">
+          <img src="{{ form.instance.logo.url }}" alt="Current Logo" class="img-thumbnail rounded mb-1" style="max-width: 120px; max-height: 120px;">
+          <div class="text-muted small">Current Logo</div>
+        </div>
+      {% endif %}
+
+      <div class="d-flex justify-content-center gap-3 mt-4">
+        <button type="submit" class="btn btn-primary"><i class="fa fa-save me-2"></i>Save</button>
+        <a href="{% url 'company-profile' %}" class="btn btn-secondary"><i class="fa fa-times me-2"></i> Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

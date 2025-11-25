@@ -1,0 +1,849 @@
+{% extends 'clients/home.html' %}
+
+{% block content %}
+<style>
+.page-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 15px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.filters-section {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.filters-section h5 {
+  color: #495057;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-group label {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.invoices-table {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.table-header {
+  background: #f8f9fa;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.table-header h5 {
+  margin: 0;
+  color: #495057;
+  font-weight: 600;
+}
+
+.table th {
+  background: #f8f9fa;
+  border: none;
+  padding: 1rem;
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  padding: 1rem;
+  vertical-align: middle;
+  border-color: #e9ecef;
+}
+
+.status-badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-due {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-scheduled {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-dropdown {
+  min-width: 120px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #ced4da;
+}
+
+.status-dropdown:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.table-success {
+  background-color: #d1e7dd !important;
+  transition: background-color 0.3s ease;
+}
+
+.amount-cell {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+}
+
+/* Select2 Styling */
+.select2-container--bootstrap-5 .select2-selection--single {
+  height: 38px;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+  line-height: 36px;
+  padding-left: 12px;
+  color: #495057;
+}
+
+.select2-container--bootstrap-5 .select2-selection--single .select2-selection__arrow {
+  height: 36px;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  z-index: 9999;
+}
+
+.select2-container--bootstrap-5 .select2-results__option {
+  padding: 8px 12px;
+}
+
+.select2-container--bootstrap-5 .select2-results__option--highlighted[aria-selected] {
+  background-color: #2563eb;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    flex-direction: column;
+  }
+
+  .filter-group {
+    min-width: 100%;
+  }
+}
+</style>
+
+{% csrf_token %}
+<div class="container-fluid my-4">
+  <!-- Page Header -->
+  <!-- <div class="page-header">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="mb-2">
+          <i class="fa fa-calendar me-3"></i>Upcoming Invoices
+        </h1>
+        <p class="mb-0 opacity-75">View and manage all upcoming invoices due within 30 days</p>
+      </div>
+      <div class="col-md-4 text-end">
+        <a href="{% url 'invoices-list' %}" class="btn btn-outline-light">
+          <i class="fa fa-list me-2"></i>View All Invoices
+        </a>
+      </div>
+    </div>
+  </div> -->
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <h5><i class="fa fa-filter me-2"></i>Filter Invoices</h5>
+    
+    <form method="GET" id="filterForm">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="project">Project</label>
+          <select name="project" id="project" class="form-select" style="width: 100%;">
+            <option value="">All Projects</option>
+            {% for project_id, project_name in projects %}
+            <option value="{{ project_name }}" {% if filters.project == project_name %}selected{% endif %}>
+              {{ project_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="partner">Partner</label>
+          <select name="partner" id="partner" class="form-select">
+            <option value="">All Partners</option>
+            {% for partner_id, partner_name in partners %}
+            <option value="{{ partner_name }}" {% if filters.partner == partner_name %}selected{% endif %}>
+              {{ partner_name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>&nbsp;</label>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+              <i class="fa fa-times me-2"></i>Clear
+            </button>
+            {% if request.user.role.name == 'Management' %}
+            <button type="button" class="btn btn-primary" onclick="showCreateInvoiceModal()">
+              <i class="fa fa-plus me-2"></i>Create Invoice
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Invoices Table -->
+  <div class="invoices-table">
+    <div class="table-header">
+      <h5><i class="fa fa-table me-2"></i>Upcoming Invoices (In 60 days) ({{ invoices.count }} results)</h5>
+    </div>
+    
+    {% if invoices %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="text-nowrap">
+          <tr>
+            <th>No</th>
+            <th>Project</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Invoiced Amount</th>
+            <th>Due Date</th>
+            <th>Description</th>
+            <th>Invoice #</th>
+            <th>Partner</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody class="text-nowrap">
+          {% for invoice in invoices %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+
+            <!-- Project -->
+            <td>
+              {{ invoice.project.name }}
+            </td>
+
+            <!-- Status -->
+            <td>
+              {% if request.user.role.name == 'Management' %}
+              <select class="form-select form-select-sm status-dropdown disabled"
+              data-invoice-id="{{ invoice.pk }}"
+              data-current-status="{{ invoice.status }}">
+              <option value="due" {% if invoice.status == 'due' %}selected{% endif %}>Due</option>
+              <option value="paid" {% if invoice.status == 'paid' %}selected{% endif %}>Paid</option>
+              <option value="scheduled" {% if invoice.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+              <option value="custom" {% if invoice.status == 'custom' %}selected{% endif %}>Custom</option>
+            </select>
+            {% else %}
+            <span class="badge bg-secondary">{{ invoice.status|title }}</span>
+            {% endif %}
+          </td>
+
+          <!-- Amount -->
+          <td class="amount-cell">{{ invoice.amount }} ({{ invoice.project.currency }})</td>
+
+          <!-- Invoiced Amount (net_amount fallback to amount) -->
+          <td class="amount-cell">{{ invoice.net_amount|default:invoice.amount }} ({{ invoice.project.currency }})</td>
+
+          <!-- Due Date -->
+          <td>
+            {% if invoice.due_date %}
+            <span class="{% if invoice.due_date < today %}text-danger{% elif invoice.due_date <= next_month %}text-warning{% endif %}">
+              {{ invoice.due_date }}
+            </span>
+            {% else %}
+            <span class="text-muted">No due date</span>
+            {% endif %}
+          </td>
+
+          <!-- Description / Payment Type -->
+          <td>
+            {% if invoice.payment_type == 'custom' %}
+            {{ invoice.custom_type|default:'Custom' }}
+            {% elif invoice.payment_type == 'cost_breakdown' %}
+            {{ invoice.description|default:'Cost Breakdown' }}
+            {% elif invoice.payment_type == 'amc' and invoice.amc_year %}
+            AMC (Year {{ invoice.amc_year }})
+            {% else %}
+            {{ invoice.payment_type|title }}
+            {% endif %}
+          </td>
+
+          <!-- Invoice # -->
+          <td><strong>{{ invoice.invoice_no }}</strong></td>
+
+          <!-- Partner -->
+          <td>
+            {% if invoice.project.partner %}
+            {{ invoice.project.partner.name }}
+            {% else %}
+            <span class="text-muted">No Partner</span>
+            {% endif %}
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <div class="action-buttons">
+              {% if request.user.role.name == 'Management' %}
+              <a href="{% url 'project-invoices' invoice.project.pk %}" class="btn btn-sm btn-outline-primary" title="Edit Invoice">
+                <i class="fa fa-edit"></i>
+              </a>
+              {% endif %}
+              <button type="button" class="btn btn-sm btn-outline-success export-btn"
+              data-invoice-id="{{ invoice.pk }}"
+              data-project-id="{{ invoice.project.pk }}"
+              data-project-name="{{ invoice.project.name }}"
+              data-invoice-no="{{ invoice.invoice_no }}"
+              title="Export Invoice">
+              <i class="fa fa-download"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="no-results">
+  <i class="fa fa-search"></i>
+  <h5>No invoices found</h5>
+
+  {% if request.user.role.name == 'Management' %}
+  <p>Try adjusting your filters or create new invoices.</p>
+  <div class="mt-3">
+    <button type="button" class="btn btn-primary btn-sm me-2" onclick="showCreateInvoiceModal()">
+      <i class="fa fa-plus me-1"></i>Create New Invoice
+    </button>
+    <a href="{% url 'invoices-list' %}" class="btn btn-outline-primary btn-sm">
+      <i class="fa fa-list me-1"></i>View All Invoices
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+</div>
+</div>
+
+<!-- Invoice Create Modal -->
+<div class="modal fade" id="invoiceCreateModal" tabindex="-1" aria-labelledby="invoiceCreateModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="invoiceCreateModalLabel">Create New Invoice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="invoiceCreateForm">
+          <div class="mb-3">
+            <label for="modalProject" class="form-label">Project</label>
+            <select class="form-select" id="modalProject" name="project" required>
+              <option value="">Select a project...</option>
+              {% for project_id, project_name in projects %}
+              <option value="{{ project_id }}" data-name="{{ project_name }}">{{ project_name }}</option>
+              {% endfor %}
+            </select>
+            <div class="invalid-feedback">Please select a project.</div>
+          </div>
+          
+          <div class="mb-3">
+           <label for="modalInvoiceNo" class="form-label">Invoice No.</label>
+           <input type="text" class="form-control" id="modalInvoiceNo" name="invoice_no" readonly>
+           <div class="form-text">Invoice number will be generated automatically when saved.</div>
+         </div>
+
+         <div class="mb-3">
+          <label for="modalDescription" class="form-label">Description</label>
+          <textarea class="form-control" id="modalDescription" name="description" rows="3" placeholder="Enter invoice description (optional)"></textarea>
+          <div class="invalid-feedback">Please enter a valid description.</div>
+        </div>
+
+        <!-- Cost Percentage Fields -->
+        <div class="mb-3">
+          <label class="form-label">Cost Percentages</label>
+          <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label small">Software %</label>
+              <input type="number" class="form-control" id="modalSoftwarePercent" name="software_percent" min="0" max="100" step="0.01" placeholder="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Customization %</label>
+              <input type="number" class="form-control" id="modalCustomizationPercent" name="customization_percent" min="0" max="100" step="0.01" placeholder="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">Integration %</label>
+              <input type="number" class="form-control" id="modalIntegrationPercent" name="integration_percent" min="0" max="100" step="0.01" placeholder="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">AMC Amount</label>
+              <input type="number" class="form-control" id="modalAmcPercent" name="amc_percent" min="0" max="100" step="0.01" placeholder="0">
+            </div>
+          </div>
+          <small class="form-text text-muted">Enter percentages for each cost type (0-100%). Amount will be calculated automatically.</small>
+        </div>
+
+        <!-- Calculated Amount Display -->
+        <div class="mb-3">
+          <label class="form-label">Calculated Amount</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="modalCalculatedAmount" readonly>
+            <span class="input-group-text" id="modalCurrency">USD</span>
+          </div>
+          <small class="form-text text-muted">This amount is calculated based on your percentages and project costs.</small>
+        </div>
+
+        <div class="mb-3">
+          <label for="modalTaxRate" class="form-label">Tax Rate (%)</label>
+          <input type="number" class="form-control" id="modalTaxRate" name="tax_rate" min="0" max="100" step="0.01" placeholder="0" value="0" required>
+          <div class="invalid-feedback">Please enter a valid tax rate.</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="modalDueDate" class="form-label">Due Date</label>
+          <input type="date" class="form-control" id="modalDueDate" name="due_date" required>
+          <div class="invalid-feedback">Please enter a valid due date.</div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="saveInvoiceBtn">Create Invoice</button>
+    </div>
+  </div>
+</div>
+</div>
+
+{% endblock %}
+
+{% block js %}
+<!-- Select2 CSS/JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+// Project data for frontend calculations
+window.projectsData = {{ projects_data_json|safe }};
+</script>
+
+<script>
+// Global variables for the current project
+let currentProjectId = null;
+let currentProjectName = '';
+let currentProjectCurrency = '';
+let currentPartnerName = '';
+
+$(document).ready(function() {
+  // Setup CSRF token for all AJAX requests
+  $.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+      if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+        xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+      }
+    }
+  });
+
+  // Initialize Select2
+  $('#project, #partner').select2({
+    placeholder: 'Select...',
+    allowClear: true,
+    width: '100%'
+  });
+
+  // Handle filter changes
+  $('#project, #partner').on('change', function() {
+    applyFilters();
+  });
+
+  // Add event listeners for percentage changes
+  $('#modalSoftwarePercent, #modalCustomizationPercent, #modalIntegrationPercent, #modalAmcPercent').on('input', calculateAmount);
+
+  // Save invoice button handler
+  $('#saveInvoiceBtn').off('click').on('click', function() {
+    const form = document.getElementById('invoiceCreateForm');
+    if (!form.checkValidity()) {
+      $(form).addClass('was-validated');
+      return;
+    }
+
+    // Disable button and show loading state
+    const $btn = $(this);
+    const originalText = $btn.text();
+    $btn.text('Creating...').prop('disabled', true);
+
+         // Get form data
+    const amount = parseFloat($('#modalCalculatedAmount').val()) || 0;
+    const costPercentages = {
+     software_percent: parseFloat($('#modalSoftwarePercent').val()) || 0,
+     customization_percent: parseFloat($('#modalCustomizationPercent').val()) || 0,
+     integration_percent: parseFloat($('#modalIntegrationPercent').val()) || 0,
+     amc_percent: parseFloat($('#modalAmcPercent').val()) || 0
+   };
+
+     // Calculate net amount by deducting partner percentages
+   let net_amount = amount;
+   const selectedProjectId = $('#modalProject').val();
+
+   if (selectedProjectId) {
+       // Get project and partner data from frontend variables
+     const projectData = window.projectsData && window.projectsData[selectedProjectId];
+     if (projectData) {
+       const partnerSoftwarePercent = parseFloat(projectData.partner_software_cost) || 0;
+       const partnerCustomizationPercent = parseFloat(projectData.partner_customization_cost) || 0;
+       const partnerIntegrationPercent = parseFloat(projectData.partner_integration_cost) || 0;
+       const partnerAmcPercent = parseFloat(projectData.partner_amc_cost) || 0;
+
+       const softwareCost = parseFloat(projectData.software_cost) || 0;
+       const customizationCost = parseFloat(projectData.customization_cost) || 0;
+       const integrationCost = parseFloat(projectData.integration_cost) || 0;
+       const amcCost = parseFloat(projectData.amc_cost) || 0;
+
+         // Calculate the actual partner deduction based on cost amounts
+       let totalPartnerDeduction = 0;
+       if (costPercentages.software_percent > 0 && softwareCost > 0) {
+         const softwareAmount = (costPercentages.software_percent / 100) * softwareCost;
+         totalPartnerDeduction += (softwareAmount * partnerSoftwarePercent) / 100;
+       }
+       if (costPercentages.customization_percent > 0 && customizationCost > 0) {
+         const customizationAmount = (costPercentages.customization_percent / 100) * customizationCost;
+         totalPartnerDeduction += (customizationAmount * partnerCustomizationPercent) / 100;
+       }
+       if (costPercentages.integration_percent > 0 && integrationCost > 0) {
+         const integrationAmount = (costPercentages.integration_percent / 100) * integrationCost;
+         totalPartnerDeduction += (integrationAmount * partnerIntegrationPercent) / 100;
+       }
+       if (costPercentages.amc_percent > 0 && amcCost > 0) {
+         const amcAmount = (costPercentages.amc_percent / 100) * amcCost;
+         totalPartnerDeduction += (amcAmount * partnerAmcPercent) / 100;
+       }
+
+       net_amount = amount - totalPartnerDeduction;
+     }
+   }
+
+   const invoiceData = {
+     description: $('#modalDescription').val(),
+     payment_type: $('#modalDescription').val() || 'Implementation Fee',
+     amount: amount,
+     net_amount: net_amount,
+     status: 'scheduled',
+     partner_status: 'scheduled',
+     due_date: $('#modalDueDate').val(),
+     tax_rate: parseFloat($('#modalTaxRate').val()) || 0,
+     cost_percentages: costPercentages,
+     project_id: selectedProjectId
+   };
+    // Create the invoice via AJAX
+   $.ajax({
+    url: `/projects/${invoiceData.project_id}/invoices/`,
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    data: {
+      invoices: JSON.stringify([invoiceData]),
+      csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+    },
+    success: function(response) {
+      if (response.success) {
+          // Close modal and refresh page to show new invoice
+        $('#invoiceCreateModal').modal('hide');
+        location.reload();
+      } else {
+        alert('Error creating invoice: ' + (response.error || 'Unknown error'));
+        $btn.text(originalText).prop('disabled', false);
+      }
+    },
+    error: function(xhr, status, error) {
+      alert('Error creating invoice: ' + error);
+      $btn.text(originalText).prop('disabled', false);
+    }
+  });
+ });
+
+  // Reset modal when closed
+$('#invoiceCreateModal').on('hidden.bs.modal', function() {
+  currentProjectId = null;
+  currentProjectName = '';
+  currentProjectCurrency = '';
+  currentPartnerName = '';
+  $('#invoiceCreateForm')[0].reset();
+  $('#invoiceCreateForm').removeClass('was-validated');
+});
+});
+
+function showCreateInvoiceModal() {
+  // Reset form
+  $('#invoiceCreateForm')[0].reset();
+  $('#invoiceCreateForm').removeClass('was-validated');
+  
+  // Set default due date to today
+  const today = new Date().toISOString().slice(0, 10);
+  $('#modalDueDate').val(today);
+  
+  // Set placeholder for invoice number
+  $('#modalInvoiceNo').val('Will be generated when saved');
+  
+  // Clear calculated amount
+  $('#modalCalculatedAmount').val('');
+  
+  // Show modal
+  $('#invoiceCreateModal').modal('show');
+}
+
+function applyFilters() {
+  const project = $('#project').val();
+  const partner = $('#partner').val();
+  
+  // Build filter URL
+  let filterUrl = '{% url "invoices-upcoming" %}?';
+  if (project) filterUrl += `project=${encodeURIComponent(project)}&`;
+  if (partner) filterUrl += `partner=${encodeURIComponent(partner)}&`;
+  
+  // Remove trailing & and reload page with filters
+  filterUrl = filterUrl.replace(/&$/, '');
+  window.location.href = filterUrl;
+}
+
+function clearFilters() {
+  window.location.href = '{% url "invoices-upcoming" %}';
+}
+
+// Calculate amount based on percentages
+function calculateAmount() {
+  const softwarePercent = parseFloat($('#modalSoftwarePercent').val()) || 0;
+  const customizationPercent = parseFloat($('#modalCustomizationPercent').val()) || 0;
+  const integrationPercent = parseFloat($('#modalIntegrationPercent').val()) || 0;
+  const amcPercent = parseFloat($('#modalAmcPercent').val()) || 0;
+  
+  // Get selected project ID
+  const selectedProjectId = $('#modalProject').val();
+  
+  if (selectedProjectId && window.projectsData && window.projectsData[selectedProjectId]) {
+    // Get project costs from frontend data
+    const projectData = window.projectsData[selectedProjectId];
+    const softwareCost = parseFloat(projectData.software_cost) || 0;
+    const customizationCost = parseFloat(projectData.customization_cost) || 0;
+    const integrationCost = parseFloat(projectData.integration_cost) || 0;
+    const amcCost = parseFloat(projectData.amc_cost) || 0;
+    
+    // Calculate total amount based on percentages of actual costs
+    const totalAmount = (softwareCost * softwarePercent / 100) + 
+    (customizationCost * customizationPercent / 100) + 
+    (integrationCost * integrationPercent / 100) + 
+    (amcCost * amcPercent / 100);
+    
+    $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+  } else if (selectedProjectId) {
+    // Fallback to AJAX if data not available in frontend
+    $.ajax({
+      url: `/projects/${selectedProjectId}/get-costs/`,
+      method: 'GET',
+      success: function(data) {
+        const softwareCost = parseFloat(data.software_cost) || 0;
+        const customizationCost = parseFloat(data.customization_cost) || 0;
+        const integrationCost = parseFloat(data.integration_cost) || 0;
+        const amcCost = parseFloat(data.amc_cost) || 0;
+        
+        // Calculate total amount based on percentages of actual costs
+        const totalAmount = (softwareCost * softwarePercent / 100) + 
+        (customizationCost * customizationPercent / 100) + 
+        (integrationCost * integrationPercent / 100) + 
+        (amcCost * amcPercent / 100);
+        
+        $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+      },
+      error: function() {
+        // Fallback to simple calculation if AJAX fails
+        const totalAmount = (softwarePercent + customizationPercent + integrationPercent + amcPercent);
+        $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+      }
+    });
+  } else {
+    // Fallback to simple calculation if no project selected
+    const totalAmount = (softwarePercent + customizationPercent + integrationPercent + amcPercent);
+    $('#modalCalculatedAmount').val(totalAmount.toFixed(2));
+  }
+}
+
+// Handle status dropdown changes
+$(document).on('change', '.status-dropdown', function() {
+  const $select = $(this);
+  const invoiceId = $select.data('invoice-id');
+  const newStatus = $select.val();
+  const currentStatus = $select.data('current-status');
+  
+  // Don't make AJAX call if status hasn't actually changed
+  if (newStatus === currentStatus) {
+    return;
+  }
+  
+  // Show loading state
+  const originalValue = $select.val();
+  $select.prop('disabled', true);
+  
+  // Make AJAX request to update status
+  $.ajax({
+    url: `/invoices/${invoiceId}/update-status/`,
+    method: 'POST',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/json'
+    },
+    data: JSON.stringify({
+      status: newStatus
+    }),
+    success: function(response) {
+      if (response.success) {
+        // Update the data attribute with new status
+        $select.data('current-status', response.status);
+        
+        // Show success message
+        const $row = $select.closest('tr');
+        $row.addClass('table-success');
+        setTimeout(() => {
+          $row.removeClass('table-success');
+        }, 2000);
+        
+        // Update the status display if needed
+        $select.val(response.status);
+      } else {
+        // Revert to original value on error
+        $select.val(currentStatus);
+        alert('Error updating status: ' + (response.error || 'Unknown error'));
+      }
+    },
+    error: function(xhr, status, error) {
+      // Revert to original value on error
+      $select.val(currentStatus);
+      let errorMessage = 'Error updating status: ';
+      if (xhr.responseJSON && xhr.responseJSON.error) {
+        errorMessage += xhr.responseJSON.error;
+      } else {
+        errorMessage += error;
+      }
+      alert(errorMessage);
+    },
+    complete: function() {
+      // Re-enable the select
+      $select.prop('disabled', false);
+    }
+  });
+});
+
+// Handle export button clicks
+$(document).on('click', '.export-btn', function() {
+  const invoiceId = $(this).data('invoice-id');
+  const projectId = $(this).data('project-id');
+  const projectName = $(this).data('project-name');
+  const invoiceNo = $(this).data('invoice-no');
+  exportSingleInvoice(invoiceId, projectId, projectName, invoiceNo);
+});
+
+function exportSingleInvoice(invoiceId, projectId, projectName, invoiceNo) {
+  // Show loading state
+  const $btn = $(`.export-btn[data-invoice-id="${invoiceId}"]`);
+  const originalHtml = $btn.html();
+  $btn.html('<i class="fa fa-spinner fa-spin"></i>').prop('disabled', true);
+  
+  // Make AJAX request to download single invoice
+  $.ajax({
+    url: `/projects/${projectId}/download-invoices/`,
+    method: 'POST',
+    data: {
+      export_type: 'selected',
+      format: 'word',
+      selected_invoices: [invoiceId],
+      csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+    },
+    traditional: true,
+    xhrFields: {
+      responseType: 'blob'
+    },
+    success: function(data, status, xhr) {
+      // Create download link
+      const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice_${projectName}_${invoiceNo.replace(/[^a-zA-Z0-9-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      // Reset button
+      $btn.html(originalHtml).prop('disabled', false);
+    },
+    error: function(xhr, status, error) {
+      let errorMessage = 'Error generating invoice: ';
+      if (xhr.responseJSON && xhr.responseJSON.error) {
+        errorMessage += xhr.responseJSON.error;
+      } else {
+        errorMessage += error;
+      }
+      alert(errorMessage);
+      $btn.html(originalHtml).prop('disabled', false);
+    }
+  });
+}
+</script>
+{% endblock %}

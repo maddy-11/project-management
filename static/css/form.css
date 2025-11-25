@@ -1,0 +1,166 @@
+/* Form styles for themed cards */
+.themed-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: var(--box-shadow);
+    padding: 32px;
+    max-width: 480px;
+    margin: 40px auto;
+    border: none;
+}
+.themed-card h2 {
+    color: var(--deep-blue);
+    font-size: 1.8em;
+    margin-bottom: 24px;
+    font-weight: 600;
+}
+.form-fields label {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-size: 0.95em;
+}
+.form-fields input, .form-fields select, .form-fields textarea {
+    width: 100%;
+    padding: 12px 16px;
+    margin: 8px 0 18px 0;
+    border: 2px solid #e2e8f0 !important;
+    border-radius: 12px;
+    font-size: 0.95em;
+    font-family: 'Inter', Arial, sans-serif;
+    background: var(--card-bg);
+    color: var(--text);
+    transition: all 0.3s ease;
+    box-shadow: none !important;
+}
+.form-fields input:focus, .form-fields select:focus, .form-fields textarea:focus {
+    border: 2px solid #e2e8f0 !important;
+    background: var(--card-bg);
+    box-shadow: none !important;
+    outline: none !important;
+    transform: none !important;
+}
+.form-fields input:hover, .form-fields select:hover, .form-fields textarea:hover {
+    border: 2px solid #e2e8f0 !important;
+    background: #f8fafc;
+    box-shadow: none !important;
+    transform: none !important;
+}
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+}
+.save-btn {
+    background: linear-gradient(135deg, var(--mid-blue) 0%, var(--accent-blue) 100%);
+    color: #fff;
+    font-weight: 600;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.2);
+    transition: all 0.3s ease;
+    border: none;
+    padding: 12px 24px;
+}
+.save-btn:hover {
+    background: var(--accent-blue);
+    box-shadow: 0 8px 20px rgba(37,99,235,0.3);
+    transform: translateY(-2px);
+}
+.cancel-btn {
+    background: var(--light-blue);
+    color: var(--deep-blue);
+    font-weight: 600;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(30,58,138,0.1);
+    transition: all 0.3s ease;
+    border: none;
+    padding: 12px 24px;
+}
+.cancel-btn:hover {
+    background: var(--accent-blue);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(59,130,246,0.3);
+    transform: translateY(-2px);
+}
+
+/* --- FORM FONT COLOR OVERRIDES FOR THEME CONSISTENCY --- */
+.form-card, .sidebar-themed-card, .themed-card {
+  color: var(--text);
+}
+.form-card h2, .sidebar-themed-card h2, .themed-card h2 {
+  color: var(--deep-blue);
+}
+.form-fields label {
+  color: var(--text);
+}
+.form-fields input, .form-fields select, .form-fields textarea {
+  color: var(--text);
+  background: var(--card-bg);
+  border: 2px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+.form-fields input::placeholder, .form-fields textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+.form-fields input:focus, .form-fields select:focus, .form-fields textarea:focus {
+  border: 2px solid #e2e8f0 !important;
+  background: var(--card-bg);
+  box-shadow: none !important;
+  outline: none !important;
+  transform: none !important;
+}
+.form-fields input:hover, .form-fields select:hover, .form-fields textarea:hover {
+  border: 2px solid #e2e8f0 !important;
+  background: #f8fafc;
+  box-shadow: none !important;
+  transform: none !important;
+}
+/* Utility classes for form font color */
+.form-blue { color: var(--accent-blue) !important; }
+.form-white { color: #fff !important; }
+
+.btn, .btn-secondary, .btn:visited, .btn-secondary:visited {
+  text-decoration: none !important;
+  text-underline-offset: 0 !important;
+}
+
+/* --- ANIMATIONS & TRANSITIONS FOR FORMS --- */
+
+.form-card, .sidebar-themed-card, .themed-card {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: cardFadeIn 0.6s ease-out forwards;
+}
+@keyframes cardFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-fields label, .form-fields input, .form-fields select, .form-fields textarea {
+  transition: color 0.3s, background 0.3s, border 0.3s, box-shadow 0.3s, transform 0.3s;
+}
+.form-fields input:focus, .form-fields select:focus, .form-fields textarea:focus {
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  transform: scale(1.02);
+}
+.form-fields input:hover, .form-fields select:hover, .form-fields textarea:hover {
+  background: #f8fafc;
+}
+
+.form-actions {
+  transition: box-shadow 0.3s, background 0.3s, transform 0.3s;
+}
+
+.error, .text-danger {
+  animation: errorShake 0.5s ease-in-out;
+}
+@keyframes errorShake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-8px); }
+  40%, 60% { transform: translateX(8px); }
+} 

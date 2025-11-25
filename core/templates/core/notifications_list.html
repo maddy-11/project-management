@@ -1,0 +1,48 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Notifications</h2>
+    <div class="mb-3">
+        <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">Mark all as read</button>
+        </form>
+        <button id="clear-notifications-btn" class="btn btn-sm btn-outline-danger ms-2">Clear</button>
+    </div>
+    <ul class="list-group" id="notifications-list">
+        {% for n in notifications %}
+        <li class="list-group-item d-flex justify-content-between align-items-center {% if not n.is_read %}list-group-item-info{% endif %}">
+            <div>
+                <div>{{ n.message }}</div>
+                <div class="text-muted small">{{ n.created_at|date:"M d, Y H:i" }}</div>
+            </div>
+            {% if not n.is_read %}
+            <span class="badge bg-primary">Unread</span>
+            {% else %}
+            <span class="badge bg-secondary">Read</span>
+            {% endif %}
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted">No notifications.</li>
+        {% endfor %}
+    </ul>
+</div>
+<script>
+    document.getElementById('clear-notifications-btn').addEventListener('click', function() {
+        if (!confirm('Are you sure you want to clear all notifications?')) return;
+        fetch("{% url 'notifications-clear-all' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('notifications-list').innerHTML = '<li class="list-group-item text-muted">No notifications.</li>';
+            }
+        });
+    });
+</script>
+{% endblock %} 

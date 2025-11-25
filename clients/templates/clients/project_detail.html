@@ -1,0 +1,1857 @@
+{% extends 'clients/home.html' %}
+{% load kanban_tags %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container-fluid my-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0 fw-bold">
+      <i class="fa-solid fa-tasks me-2 text-primary"></i> {{ project.name }}
+    </h2>
+    <a href="{% url 'project-list' %}" class="btn btn-outline-secondary">
+      <i class="fa-solid fa-arrow-left me-1"></i> Back to Projects
+    </a>
+  </div>
+
+  <!-- View Toggle -->
+  <div class="mb-4 d-flex justify-content-end">
+    <div class="btn-group shadow-sm" role="group" aria-label="View Switcher">
+      <button id="listViewBtn" type="button" class="btn btn-outline-primary rounded-start">List View</button>
+      <button id="kanbanViewBtn" type="button" class="btn btn-outline-primary rounded-end">Kanban View</button>
+    </div>
+  </div>
+
+  <!-- List View (default) -->
+  <div id="listViewBlock">
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card mb-4 shadow-sm rounded-3">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Tasks</h5>
+            <div class="table-responsive">
+              <table class="table table-striped align-middle">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Assigned To</th>
+                    <th>Created By</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for task in tasks %}
+                  <tr>
+                    <td>{{ task.title }}</td>
+                    <td>
+                      <div class="d-flex gap-1 align-items-center">
+                        {% for u in task.assignees.all %}
+                          <span class="badge bg-primary bg-opacity-10 text-primary border">{{ u.first_name|default:u.username }}</span>
+                        {% empty %}
+                        {% endfor %}
+                        {% if task.assignees.count == 0 %}
+                          <span class="text-muted">Unassigned</span>
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>{{ task.created_by.first_name }}</td>
+                    <td>
+                      <select class="form-select form-select-sm task-status-dropdown w-auto" data-task-id="{{ task.id }}">
+                        {% for status in statuses %}
+                        <option value="{{ status.id }}" {% if task.status_id == status.id %}selected{% endif %}>{{ status.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>{{ task.created_at|date:'Y-m-d H:i' }}</td>
+                    <td>
+                      <a href="{% url 'task-update' task.pk %}" class="btn btn-sm btn-outline-primary me-1">
+                        <i class="fa-solid fa-pen"></i> Edit
+                      </a>
+                      <a href="{% url 'task-delete' task.pk %}" class="btn btn-sm btn-outline-danger">
+                        <i class="fa-solid fa-trash"></i> Delete
+                      </a>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6" class="text-center text-muted">No tasks found.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 overflow-y-auto" style="max-height: 500px;">
+        <div class="card shadow-sm rounded-3">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Add Task</h5>
+            <form method="post" enctype="multipart/form-data" class="p-4 bg-white border-top rounded-3" novalidate id="listAddTaskForm">
+              {% csrf_token %}
+              {% for field in form %}
+              <div class="mb-2 align-items-center">
+                <label for="{{ field.id_for_label }}" class="col-form-label fw-semibold">
+                  {{ field.label }}
+                </label>
+                <div>
+                  {% if field.name == 'assignees' %}
+                    {{ field|add_class:"form-select assignees-select shadow-sm rounded-3" }}
+                  {% else %}
+                    {{ field|add_class:"form-control shadow-sm rounded-3" }}
+                  {% endif %}
+                  {% if field.help_text %}
+                  <div class="form-text">{{ field.help_text }}</div>
+                  {% endif %}
+                  {% if field.errors %}
+                  <div class="text-danger small mt-1">
+                    {{ field.errors|striptags }}
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              {% endfor %}
+              <!-- Attachments -->
+              <div class="mb-4align-items-center">
+                <label class="col-form-label fw-semibold">Attachments</label>
+                <div>
+                  <input type="file" name="attachments" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx">
+                  <div class="form-text">You can select multiple files.</div>
+                </div>
+              </div>
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-success px-4 rounded-pill">
+                  <i class="fa-solid fa-plus me-2"></i> Add Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kanban View -->
+  <div id="kanbanViewBlock" style="display:none;">
+    <!-- Login Credentials Section -->
+    <div class="card mb-4 shadow-sm border-info">
+      <div class="card-header bg-info bg-gradient text-white">
+        <h6 class="mb-0 fw-bold">
+          <i class="fa-solid fa-key me-2"></i>Link and Login Credentials
+        </h6>
+      </div>
+      <div class="card-body bg-light">
+        <div class="row">
+          <div class="col-md-4">
+            <div class="input-group mb-2">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="fa-solid fa-link text-muted"></i>
+              </span>
+              {% if project.link %}
+                <a href="{{ project.link }}" target="_blank" class="form-control border-start-0 bg-white text-decoration-none" id="projectLink" style="display: flex; align-items: center;">
+                  <span class="text-secondary">{{ project.link|truncatechars:30 }}</span>
+                  <i class="fa-solid fa-external-link-alt ms-2 text-muted"></i>
+                </a>
+              {% else %}
+                <input type="text" class="form-control border-start-0 bg-white" value="No link provided" readonly id="projectLink">
+              {% endif %}
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('projectLink')">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="input-group mb-2">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="fa-solid fa-envelope text-muted"></i>
+              </span>
+              <input type="text" class="form-control border-start-0 bg-white" value="admin@fineit.io" readonly id="loginEmail">
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('loginEmail')">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="input-group mb-2">
+              <span class="input-group-text bg-white border-end-0">
+                <i class="fa-solid fa-lock text-muted"></i>
+              </span>
+              <input type="password" class="form-control border-start-0 bg-white" value="Creative1984@@" readonly id="loginPassword">
+              <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('loginPassword')">
+                <i class="fa-solid fa-eye" id="passwordToggleIcon"></i>
+              </button>
+              <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('loginPassword')">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <small class="text-muted">
+          <i class="fa-solid fa-info-circle me-1"></i>
+          Click the copy buttons to copy credentials to clipboard
+        </small>
+      </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h5 class="mb-0 fw-bold text-dark">Kanban Board</h5>
+      <div>
+        <button class="btn btn-info shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#projectDocumentsModal">
+          <i class="fa-solid fa-folder-open me-2"></i> All Documents
+        </button>
+        <button class="btn btn-warning shadow-sm me-2" data-bs-toggle="modal" data-bs-target="#archiveTasksModal">
+          <i class="fa-solid fa-archive me-2"></i> Archive Tasks
+        </button>
+        <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
+          <i class="fa-solid fa-plus me-2"></i> Add Column
+        </button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <div class="d-flex" id="kanbanBoard">
+        {% for status in statuses %}
+        <div class="col-4 mb-4 mx-1 kanban-status-col" data-status-id="{{ status.id }}">
+          <div class="card border shadow-sm h-100">
+            <div class="card-header bg-white rounded-top-3 d-flex justify-content-between align-items-center" style="cursor: grab;">
+              <h6 class="mb-0 fw-bold">{{ status.name }}</h6>
+              <span class="badge rounded-pill">
+                {% with status_tasks=tasks|filter_status:status.id %}
+                {{ status_tasks|length }} tasks
+                {% endwith %}
+              </span>
+              {% if not status.is_default %}
+              <div class="btn-group ms-2">
+                <button class="btn btn-sm btn-outline-primary edit-status-btn" data-status-id="{{ status.id }}" data-status-name="{{ status.name }}" title="Edit Status">
+                  <i class="fa fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger delete-status-btn" data-status-id="{{ status.id }}" title="Delete Status">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </div>
+              {% endif %}
+            </div>
+            <div class="card-body kanbasics kanban-column p-2" data-status-id="{{ status.id }}" id="kanban-status-{{ status.id }}">
+              {% for task in tasks %}
+              {% if task.status_id == status.id %}
+              <div class="card mb-3 kanban-task shadow-sm border-start border-3 
+              {% if task.priority == 'High' %}border-danger
+              {% elif task.priority == 'Medium' %}border-warning
+              {% else %}border-info{% endif %}" data-task-id="{{ task.id }}" style="cursor:pointer;">
+              <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="card-title mb-0 fw-semibold">{{ task.title }}</h6>
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end kanban-task-dropdown" style="z-index: 1050; position: absolute;">
+                      <li><a class="dropdown-item kanban-task-edit" href="#" data-task-id="{{ task.id }}">
+                        <i class="fas fa-edit me-2"></i>Edit
+                      </a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger kanban-task-delete" href="#" data-task-id="{{ task.id }}">
+                        <i class="fas fa-trash me-2"></i>Delete
+                      </a></li>
+                    </ul>
+                  </div>
+                </div>
+
+              <div class="d-flex align-items-center mb-2">
+                  <div class="me-2">
+                    <span class="badge bg-light text-dark">
+                      <i class="fas fa-user-circle me-1"></i>
+                      {% if task.assignees.count > 0 %}
+                        {{ task.assignees.first.first_name|default:task.assignees.first.username }}{% if task.assignees.count > 1 %} +{{ task.assignees.count|add:-1 }}{% endif %}
+                      {% else %}
+                        Unassigned
+                      {% endif %}
+                    </span>
+                  </div>
+                  {% if task.due_date %}
+                  <span class="badge {% if task.is_overdue %}bg-danger{% else %}bg-light text-dark{% endif %}">
+                    <i class="fas fa-calendar-day me-1"></i>{{ task.due_date|date:'M d' }}
+                  </span>
+                  {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                  <small class="text-muted">
+                    <i class="far fa-clock me-1"></i>{{ task.created_at|date:'M d, Y' }}
+                  </small>
+                  {% if task.labels %}
+                  <span class="badge bg-secondary">{{ task.labels }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+
+            {% with status_tasks=tasks|filter_status:status.id %}
+            {% if not status_tasks %}
+            <div class="text-center py-4 text-muted">
+              <i class="fas fa-tasks fa-2x mb-2"></i>
+              <p class="mb-0">No tasks in this column</p>
+            </div>
+            {% endif %}
+            {% endwith %}
+          </div>
+
+          <div class="card-footer bg-transparent border-0">
+            <button class="btn btn-outline-secondary btn-sm w-100 add-task-btn" data-bs-toggle="modal" data-bs-target="#addTaskModal" data-status-id="{{ status.id }}">
+              <i class="fas fa-plus me-1"></i> Add Task
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Add Status Modal (for Kanban) -->
+<div class="modal fade" id="addStatusModal" tabindex="-1" aria-labelledby="addStatusModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header bg-light border-bottom">
+        <h5 class="modal-title fw-bold" id="addStatusModalLabel">Add Status</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="kanbanAddStatusForm" method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="statusName" class="form-label fw-semibold">Status Name</label>
+            <input type="text" class="form-control" id="statusName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="statusPosition" class="form-label fw-semibold">Position (after)</label>
+            <select class="form-select" id="statusPosition" name="after_status_id">
+              {% for status in statuses %}
+              <option value="{{ status.id }}">{{ status.name }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Choose after which status to place the new one.</div>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-success rounded-pill px-4">Add Status</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Status Modal (for Kanban) -->
+<div class="modal fade" id="editStatusModal" tabindex="-1" aria-labelledby="editStatusModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header bg-light border-bottom">
+        <h5 class="modal-title fw-bold" id="editStatusModalLabel">Edit Status</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="kanbanEditStatusForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" id="editStatusId" name="status_id">
+          <div class="mb-3">
+            <label for="editStatusName" class="form-label fw-semibold">Status Name</label>
+            <input type="text" class="form-control" id="editStatusName" name="name" required>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary rounded-pill px-4">Update Status</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Task Modal (for Kanban) -->
+<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header bg-light border-bottom">
+        <h5 class="modal-title fw-bold" id="addTaskModalLabel">Add Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="kanbanAddTaskForm" method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3 row justify-content-between">
+            <label for="kanban-{{ field.id_for_label }}" class="col-3 form-label fw-semibold">{{ field.label }}</label>
+            <div class="col-8">
+              {% if field.name == 'assignees' %}
+                {{ field|add_class:"form-select assignees-select shadow-sm rounded-3 kanban-form-field"|attr:"id:kanban-" }}
+              {% else %}
+                {{ field|add_class:"form-control shadow-sm rounded-3 kanban-form-field"|attr:"id:kanban-" }}
+              {% endif %}
+            </div>
+            {% if field.help_text %}
+            <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+            {% if field.errors %}
+            <div class="text-danger small mt-1">
+              {{ field.errors|striptags }}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          <!-- Attachments -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Attachments</label>
+            <div>
+              <input type="file" name="attachments" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx">
+              <div class="form-text">You can select multiple files.</div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-success rounded-pill px-4">Add Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- Project Documents Modal -->
+<div class="modal fade" id="projectDocumentsModal" tabindex="-1" aria-labelledby="projectDocumentsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <h5 class="modal-title fw-bold text-white" id="projectDocumentsModalLabel">
+          <i class="fa-solid fa-folder-open me-2"></i>Project Documents
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="container-fluid p-4">
+          <!-- Search and Filter Bar -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                  <i class="fa-solid fa-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0" id="documentSearch" placeholder="Search documents...">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select" id="documentTypeFilter">
+                <option value="">All Types</option>
+                <option value="image">Images</option>
+                <option value="pdf">PDFs</option>
+                <option value="document">Documents</option>
+                <option value="spreadsheet">Spreadsheets</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select" id="taskFilter">
+                <option value="">All Tasks</option>
+                {% for task in all_tasks %}
+                <option value="{{ task.id }}">{{ task.title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Documents Grid -->
+          <div id="documentsGrid" class="row g-3">
+            {% regroup all_tasks by attachments.all as task_attachments %}
+            {% for task in all_tasks %}
+              {% for attachment in task.attachments.all %}
+                <div class="col-lg-3 col-md-4 col-sm-6 document-item" 
+                     data-task-id="{{ task.id }}" 
+                     data-task-title="{{ task.title }}"
+                     data-file-type="{% if attachment.file.name|lower|slice:'-4:' == '.jpg' or attachment.file.name|lower|slice:'-5:' == '.jpeg' or attachment.file.name|lower|slice:'-4:' == '.png' %}image{% elif attachment.file.name|lower|slice:'-4:' == '.pdf' %}pdf{% elif attachment.file.name|lower|slice:'-4:' == '.doc' or attachment.file.name|lower|slice:'-5:' == '.docx' %}document{% elif attachment.file.name|lower|slice:'-4:' == '.xls' or attachment.file.name|lower|slice:'-5:' == '.xlsx' %}spreadsheet{% else %}other{% endif %}"
+                     data-file-name="{{ attachment.file.name }}"
+                     data-upload-date="{{ attachment.uploaded_at|date:'Y-m-d H:i:s' }}">
+                  <div class="card h-100 shadow-sm border-0 document-card">
+                    <div class="card-body p-3">
+                      <div class="d-flex align-items-center mb-3">
+                        {% with fname=attachment.file.name|lower %}
+                          {% if fname|slice:"-4:" == ".jpg" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-4:" == ".png" %}
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="fa-solid fa-image text-success"></i>
+                            </div>
+                          {% elif fname|slice:"-4:" == ".pdf" %}
+                            <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="fa-solid fa-file-pdf text-danger"></i>
+                            </div>
+                          {% elif fname|slice:"-4:" == ".doc" or fname|slice:"-5:" == ".docx" %}
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="fa-solid fa-file-word text-primary"></i>
+                            </div>
+                          {% elif fname|slice:"-4:" == ".xls" or fname|slice:"-5:" == ".xlsx" %}
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="fa-solid fa-file-excel text-success"></i>
+                            </div>
+                          {% else %}
+                            <div class="bg-secondary bg-opacity-10 rounded-circle p-2 me-3">
+                              <i class="fa-solid fa-file text-secondary"></i>
+                            </div>
+                          {% endif %}
+                        {% endwith %}
+                        <div class="flex-grow-1" style="min-width: 0;">
+                          <h6 class="mb-0 fw-semibold" style="word-break: break-word; line-height: 1.3;" title="{{ attachment.file.name }}">
+                            {{ attachment.file.name|slice:"-25:" }}
+                          </h6>
+                          <small class="text-muted text-truncate d-block">{{ task.title }}</small>
+                        </div>
+                      </div>
+                      
+                      {% with fname=attachment.file.name|lower %}
+                        {% if fname|slice:"-4:" == ".jpg" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-4:" == ".png" %}
+                          <div class="text-center mb-3">
+                            <img src="{{ attachment.file.url }}" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 120px; object-fit: cover;">
+                          </div>
+                        {% endif %}
+                      {% endwith %}
+                      
+                      <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                          <i class="fa-solid fa-calendar me-1"></i>
+                          {{ attachment.uploaded_at|date:"M d, Y" }}
+                        </small>
+                        <div class="btn-group btn-group-sm">
+                          <a href="{{ attachment.file.url }}" target="_blank" class="btn btn-outline-primary btn-sm" title="View">
+                            <i class="fa-solid fa-eye"></i>
+                          </a>
+                          <a href="{{ attachment.file.url }}" download class="btn btn-outline-success btn-sm" title="Download">
+                            <i class="fa-solid fa-download"></i>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% empty %}
+              <div class="col-12">
+                <div class="text-center py-5">
+                  <i class="fa-solid fa-folder-open fa-3x text-muted mb-3"></i>
+                  <h5 class="text-muted">No documents found</h5>
+                  <p class="text-muted">This project doesn't have any documents yet.</p>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-top">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <small class="text-muted">
+            <span id="documentCount">{{ tasks|length }} documents</span> found
+          </small>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fa-solid fa-times me-1"></i> Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Archive Tasks Modal -->
+<div class="modal fade" id="archiveTasksModal" tabindex="-1" aria-labelledby="archiveTasksModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+        <h5 class="modal-title fw-bold text-white" id="archiveTasksModalLabel">
+          <i class="fa-solid fa-archive me-2"></i>Archived Tasks
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="container-fluid p-4">
+          <!-- Info Banner -->
+          <div class="alert alert-info border-0 mb-4">
+            <div class="d-flex align-items-center">
+              <i class="fa-solid fa-info-circle fa-2x me-3 text-info"></i>
+              <div>
+                <h6 class="mb-1 fw-bold">Archived Tasks</h6>
+                <p class="mb-0 text-muted">These are completed tasks that were finished more than 30 days ago. They are hidden from the main kanban board to keep it clean and focused on current work.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search and Filter Bar -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0">
+                  <i class="fa-solid fa-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0" id="archiveSearch" placeholder="Search archived tasks...">
+              </div>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select" id="archiveAssigneeFilter">
+                <option value="">All Assignees</option>
+                {% for member in project.members.all %}
+                <option value="{{ member.id }}">{{ member.get_full_name|default:member.username }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <select class="form-select" id="archiveDateFilter">
+                <option value="">All Dates</option>
+                <option value="30-60">30-60 days ago</option>
+                <option value="60-90">60-90 days ago</option>
+                <option value="90+">90+ days ago</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Archived Tasks List -->
+          <div id="archivedTasksList">
+            <div class="text-center py-5">
+              <i class="fa-solid fa-archive fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">Loading archived tasks...</h5>
+              <p class="text-muted">Please wait while we fetch the archived tasks.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-top">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <small class="text-muted">
+            <span id="archiveCount">0 tasks</span> found
+          </small>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fa-solid fa-times me-1"></i> Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide-in Task Detail Panel -->
+<div id="taskDetailPanel" style="position:fixed; top:0; right:-700px; width:600px; height:100%; background:#fff; box-shadow:-2px 0 8px rgba(0,0,0,0.15); z-index:1060; transition:right 0.3s; overflow-y:auto;">
+  <button id="closeTaskPanel" class="btn btn-light position-absolute top-0 end-0 m-2" style="z-index:1070;">&times;</button>
+  <div id="taskDetailContent" class="p-4"></div>
+</div>
+
+<style>
+.table-responsive table th, td {
+  white-space: nowrap;
+}
+
+/* Professional Kanban Column Styling */
+.kanban-status-col {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.kanban-status-col:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-color: #d1d5db;
+}
+
+.kanban-column {
+  min-height: 400px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: visible;
+  background: #fafafa;
+  border-radius: 0 0 8px 8px;
+  padding: 16px;
+  position: relative;
+}
+
+.kanban-column::-webkit-scrollbar {
+  width: 6px;
+}
+
+.kanban-column::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.kanban-column::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.kanban-column::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Modern Kanban Task Cards */
+.kanban-task {
+  cursor: grab;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: relative;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.kanban-task::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 12px 12px 0 0;
+}
+
+.kanban-task:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  border-color: #3b82f6;
+}
+
+.kanban-task:active {
+  cursor: grabbing;
+  transform: translateY(-2px);
+}
+
+/* Task Card Body */
+.kanban-task .card-body {
+  padding: 18px;
+  position: relative;
+}
+
+.kanban-task .card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111827;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+/* Modern Badge Styling */
+.kanban-task .badge {
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none;
+}
+
+.kanban-task .badge.bg-light {
+  background: rgba(243, 244, 246, 0.9) !important;
+  color: #374151 !important;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.kanban-task .badge.bg-danger {
+  background: #ef4444 !important;
+  color: white !important;
+}
+
+.kanban-task .badge.bg-success {
+  background: #10b981 !important;
+  color: white !important;
+}
+
+/* Priority Border Enhancement */
+.kanban-task.border-danger {
+  border-left: 3px solid #dc2626 !important;
+}
+
+.kanban-task.border-warning {
+  border-left: 3px solid #d97706 !important;
+}
+
+.kanban-task.border-info {
+  border-left: 3px solid #2563eb !important;
+}
+
+/* Column Header Enhancement */
+.kanban-status-col .card-header {
+  background: #ffffff;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.kanban-status-col .card-header h6 {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111827;
+  margin: 0;
+}
+
+.kanban-status-col .card-header .badge {
+  background: #374151;
+  color: white;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+/* Add Task Button Enhancement */
+.kanban-status-col .card-footer {
+  background: transparent;
+  border: none;
+  padding: 16px;
+}
+
+.kanban-status-col .add-task-btn {
+  background: #374151;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-weight: 500;
+  color: white;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.kanban-status-col .add-task-btn:hover {
+  background: #1f2937;
+  transform: translateY(-1px);
+}
+
+/* Delete Status Button Enhancement */
+.delete-status-btn {
+  background: #dc2626;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: white;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.delete-status-btn:hover {
+  background: #b91c1c;
+}
+
+/* Empty Column Styling */
+.kanban-column .text-center {
+  padding: 40px 20px;
+}
+
+.kanban-column .text-center i {
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+.kanban-column .text-center p {
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+  .kanban-status-col {
+    margin-bottom: 16px;
+  }
+  
+  .kanban-task .card-body {
+    padding: 12px;
+  }
+  
+  .kanban-column {
+    padding: 12px;
+  }
+}
+
+/* Subtle Animation for new tasks */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.kanban-task {
+  animation: fadeInUp 0.3s ease;
+}
+
+/* Drag and drop visual feedback */
+.sortable-ghost {
+  opacity: 0.3;
+}
+
+.sortable-chosen {
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Empty Column Styling */
+.kanban-column .text-center {
+  padding: 40px 20px;
+}
+
+.kanban-column .text-center i {
+  color: #9ca3af;
+  margin-bottom: 12px;
+}
+
+.kanban-column .text-center p {
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+/* Project Documents Modal Styles */
+.document-card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef !important;
+}
+
+.document-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+  border-color: #667eea !important;
+}
+
+.document-card .card-body {
+  padding: 1rem;
+}
+
+.document-item img {
+  transition: transform 0.3s ease;
+}
+
+.document-item:hover img {
+  transform: scale(1.05);
+}
+
+#projectDocumentsModal .modal-content {
+  border: none;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+#projectDocumentsModal .modal-header {
+  border-bottom: none;
+  padding: 1.5rem 2rem 1rem;
+}
+
+#projectDocumentsModal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+#projectDocumentsModal .modal-footer {
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 2rem;
+}
+
+.document-card .btn-group .btn {
+  /* border-radius: 0.375rem; */
+  margin: 0 1px;
+}
+
+.document-card .btn-group .btn:hover {
+  transform: scale(1.1);
+}
+
+/* Archive Tasks Modal Styles */
+.archived-task-card {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef !important;
+}
+
+.archived-task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+  border-color: #f39c12 !important;
+}
+
+#archiveTasksModal .modal-content {
+  border: none;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+#archiveTasksModal .modal-header {
+  border-bottom: none;
+  padding: 1.5rem 2rem 1rem;
+}
+
+#archiveTasksModal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+#archiveTasksModal .modal-footer {
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 2rem;
+}
+
+.document-card h6 {
+  font-size: 0.9rem;
+  max-height: 2.6em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.document-card .flex-grow-1 {
+  overflow: hidden;
+}
+
+/* Kanban Task Dropdown Fixes */
+.kanban-task .dropdown {
+  position: relative;
+}
+
+.kanban-task .dropdown-menu {
+  z-index: 1050 !important;
+  position: absolute !important;
+  min-width: 120px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.375rem;
+}
+
+.kanban-task .dropdown-menu-end {
+  right: 0;
+  left: auto;
+}
+
+.kanban-task .dropdown-menu-start {
+  left: 0;
+  right: auto;
+}
+
+.kanban-task .dropdown-item {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+}
+
+.kanban-task .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.kanban-task .dropdown-item.text-danger:hover {
+  background-color: #f8d7da;
+  color: #721c24 !important;
+}
+
+/* Ensure dropdown is visible outside kanban column */
+.kanban-status-col {
+  overflow: visible !important;
+}
+
+.kanban-status-col .card {
+  overflow: visible !important;
+}
+</style>
+{% endblock %}
+
+{% block js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+$(document).ready(function () {
+  // Enhance assignees selects with Select2 (CDN)
+  function initAssigneesSelect($el){
+    if (!$el.length) return;
+    if ($el.data('select2')) return;
+    $el.select2({
+      theme: 'bootstrap-5',
+      width: '100%',
+      placeholder: 'Select assignees...',
+      allowClear: true,
+      closeOnSelect: false
+    });
+  }
+  (function ensureSelect2(){
+    if (window.jQuery && $.fn.select2) {
+      initAssigneesSelect($('.assignees-select'));
+      return;
+    }
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css';
+    document.head.appendChild(link);
+    var bs5 = document.createElement('link');
+    bs5.rel = 'stylesheet';
+    bs5.href = 'https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css';
+    document.head.appendChild(bs5);
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js';
+    script.onload = function(){ initAssigneesSelect($('.assignees-select')); };
+    document.body.appendChild(script);
+  })();
+  // Load view preference from localStorage
+  const viewPreference = localStorage.getItem('projectView') || 'list';
+  if (viewPreference === 'kanban') {
+    $('#listViewBlock').hide();
+    $('#kanbanViewBlock').show();
+    $('#listViewBtn').removeClass('active');
+    $('#kanbanViewBtn').addClass('active');
+  } else {
+    $('#listViewBlock').show();
+    $('#kanbanViewBlock').hide();
+    $('#listViewBtn').addClass('active');
+    $('#kanbanViewBtn').removeClass('active');
+  }
+
+  // View toggle logic
+  $('#listViewBtn').on('click', function () {
+    $('#listViewBlock').show();
+    $('#kanbanViewBlock').hide();
+    $('#listViewBtn').addClass('active');
+    $('#kanbanViewBtn').removeClass('active');
+    localStorage.setItem('projectView', 'list');
+  });
+
+  $('#kanbanViewBtn').on('click', function () {
+    $('#listViewBlock').hide();
+    $('#kanbanViewBlock').show();
+    $('#listViewBtn').removeClass('active');
+    $('#kanbanViewBtn').addClass('active');
+    localStorage.setItem('projectView', 'kanban');
+  });
+
+  // Set default created_by to current user in List View form
+  $('#listAddTaskForm select[name="created_by"]').val('{{ user.id }}');
+
+  // Set default created_by to current user in Kanban Add Task modal
+  $('#addTaskModal').on('show.bs.modal', function () {
+    $('#kanbanAddTaskForm select[name="created_by"]').val('{{ user.id }}');
+  });
+
+  // Kanban drag-and-drop for tasks
+  const columns = $('.kanban-status-col').map(function(){ return 'kanban-status-' + $(this).data('status-id'); }).get();
+  columns.forEach(function (colId) {
+    new Sortable(document.getElementById(colId), {
+      group: 'kanban',
+      animation: 150,
+      onAdd: function (evt) {
+        const taskId = $(evt.item).data('task-id');
+        const newStatusId = $(evt.to).data('status-id');
+        const updateUrlTemplate = "{% url 'task-update-status' 0 %}".replace('/0/', '/TASK_ID_REPLACE/');
+        const updateUrl = updateUrlTemplate.replace('TASK_ID_REPLACE', taskId);
+        $.ajax({
+          url: updateUrl,
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          contentType: 'application/json',
+          data: JSON.stringify({ status_id: newStatusId }),
+          error: function () {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to update status',
+              confirmButtonColor: '#dc3545'
+            });
+          },
+          success: function(){
+            // Update task counts for all columns
+            updateTaskCounts();
+          }
+        });
+      }
+    });
+  });
+
+  // Function to update task counts
+  function updateTaskCounts() {
+    $('.kanban-status-col').each(function() {
+      const statusId = $(this).data('status-id');
+      const taskCount = $(this).find('.kanban-task').length;
+      $(this).find('.badge').text(taskCount + ' task' + (taskCount !== 1 ? 's' : ''));
+      
+      // Show/hide empty column message
+      const emptyMessage = $(this).find('.text-center');
+      if (taskCount === 0) {
+        emptyMessage.show();
+      } else {
+        emptyMessage.hide();
+      }
+    });
+  }
+
+  // Kanban drag-and-drop for status columns
+  new Sortable(document.getElementById('kanbanBoard'), {
+    animation: 200,
+    handle: '.card-header',
+    draggable: '.kanban-status-col',
+    onEnd: function (evt) {
+      const newOrder = [];
+      $('#kanbanBoard .kanban-status-col').each(function(){
+        newOrder.push($(this).data('status-id'));
+      });
+      $.ajax({
+        url: `/projects/{{ project.id }}/reorder_statuses/`,
+        type: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        contentType: 'application/json',
+        data: JSON.stringify({ order: newOrder }),
+        success: function(data){
+          // Optionally, show a toast or update UI
+        },
+        error: function(){
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to reorder statuses',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      });
+    }
+  });
+
+  // Set default status in Add Task modal based on column button clicked
+  $('.add-task-btn').on('click', function () {
+    const statusId = $(this).data('status-id');
+    $('#kanbanAddTaskForm select[name="status"]').val(statusId);
+  });
+
+  // Add Status via Modal (Kanban)
+  $('#kanbanAddStatusForm').on('submit', function (e) {
+    e.preventDefault();
+    const $form = $(this);
+    const projectId = {{ project.id }};
+    $.ajax({
+      url: `/projects/${projectId}/add_status/`,
+      type: 'POST',
+      headers: {
+        'X-CSRFToken': $form.find('input[name="csrfmiddlewaretoken"]').val()
+      },
+      data: $form.serialize(),
+      success: function (data) {
+        if (data.success) {
+          location.reload();
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to add status',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      },
+      error: function () {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to add status',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    });
+  });
+
+  // Add Task via Modal (Kanban)
+  $('#kanbanAddTaskForm').on('submit', function (e) {
+    e.preventDefault();
+    const $form = $(this);
+    var formData = new FormData(this);
+    $.ajax({
+      url: window.location.pathname,
+      type: 'POST',
+      headers: {
+        'X-CSRFToken': $form.find('input[name="csrfmiddlewaretoken"]').val()
+      },
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function () {
+        location.reload();
+      },
+      error: function () {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to add task',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    });
+  });
+
+  // Edit status (non-default)
+  $(document).on('click', '.edit-status-btn', function(){
+    const statusId = $(this).data('status-id');
+    const statusName = $(this).data('status-name');
+    
+    $('#editStatusId').val(statusId);
+    $('#editStatusName').val(statusName);
+    $('#editStatusModal').modal('show');
+  });
+
+  // Edit Status via Modal (Kanban)
+  $('#kanbanEditStatusForm').on('submit', function (e) {
+    e.preventDefault();
+    const $form = $(this);
+    const projectId = {{ project.id }};
+    const statusId = $('#editStatusId').val();
+    const newName = $('#editStatusName').val();
+    
+    $.ajax({
+      url: `/projects/${projectId}/edit_status/`,
+      type: 'POST',
+      headers: {
+        'X-CSRFToken': $form.find('input[name="csrfmiddlewaretoken"]').val()
+      },
+      contentType: 'application/json',
+      data: JSON.stringify({ 
+        status_id: statusId,
+        name: newName 
+      }),
+      success: function (data) {
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: 'Status updated successfully',
+            confirmButtonColor: '#28a745',
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            location.reload();
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: data.error || 'Failed to update status',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      },
+      error: function () {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to update status',
+          confirmButtonColor: '#dc3545'
+        });
+      }
+    });
+  });
+
+  // Delete status (non-default)
+  $(document).on('click', '.delete-status-btn', function(){
+    const statusId = $(this).data('status-id');
+    
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        $.ajax({
+          url: `/projects/{{ project.id }}/delete_status/`,
+          type: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          contentType: 'application/json',
+          data: JSON.stringify({ status_id: statusId }),
+          success: function(data){
+            if(data.success){
+              Swal.fire({
+                icon: 'success',
+                title: 'Deleted!',
+                text: 'Status has been deleted.',
+                confirmButtonColor: '#28a745',
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => {
+                location.reload();
+              });
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'Failed to delete status',
+                confirmButtonColor: '#dc3545'
+              });
+            }
+          },
+          error: function(){
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'Failed to delete status',
+              confirmButtonColor: '#dc3545'
+            });
+          }
+        });
+      }
+    });
+  });
+
+  // Initialize dropdown positioning for kanban tasks
+  $(document).on('show.bs.dropdown', '.kanban-task .dropdown', function() {
+    const $dropdown = $(this);
+    const $menu = $dropdown.find('.dropdown-menu');
+    const $button = $dropdown.find('[data-bs-toggle="dropdown"]');
+    
+    // Get button position
+    const buttonRect = $button[0].getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    
+    // Check if dropdown would overflow to the right
+    const dropdownWidth = 120; // Approximate dropdown width
+    const wouldOverflow = (buttonRect.right + dropdownWidth) > viewportWidth;
+    
+    if (wouldOverflow) {
+      // Position to the left instead
+      $menu.removeClass('dropdown-menu-end').addClass('dropdown-menu-start');
+      $menu.css({
+        'position': 'absolute',
+        'z-index': '1050',
+        'left': '0',
+        'right': 'auto'
+      });
+    } else {
+      // Position to the right (default)
+      $menu.removeClass('dropdown-menu-start').addClass('dropdown-menu-end');
+      $menu.css({
+        'position': 'absolute',
+        'z-index': '1050',
+        'right': '0',
+        'left': 'auto'
+      });
+    }
+  });
+
+  // Kanban Task Card Click Handler (open slide-in panel)
+  $(document).on('click', '.kanban-task', function(e) {
+    e.preventDefault(); // Prevent default behavior
+    e.stopPropagation(); // Stop event bubbling to parent elements
+    if($(e.target).closest('.dropdown').length) return; // Ignore dropdown clicks
+    const taskId = $(this).data('task-id');
+    
+    // Show panel and animate in
+    $('#taskDetailPanel').css({right: '-500px', display: 'block'}).animate({right: '0'}, 300);
+    
+    // Load task details
+    $('#taskDetailContent').html('<div class="text-center my-5"><div class="spinner-border"></div></div>');
+    $.ajax({
+      url: `/tasks/${taskId}/panel/`,
+      type: 'GET',
+      success: function(data) {
+        $('#taskDetailContent').html(data);
+      },
+      error: function() {
+        $('#taskDetailContent').html('<div class="text-center text-danger">Failed to load task details.</div>');
+      }
+    });
+  });
+
+  // Close slide-in panel
+  $('#closeTaskPanel').on('click', function(e) {
+    e.stopPropagation();
+    $('#taskDetailPanel').animate({right: '-500px'}, 300, function(){ $(this).hide(); });
+  });
+
+  // Close panel on outside click
+  $(document).on('click', function(e) {
+    if (
+      $('#taskDetailPanel').is(':visible') &&
+      !$(e.target).closest('#taskDetailPanel').length &&
+      !$(e.target).closest('.kanban-task').length &&
+      !$(e.target).closest('.dropdown-menu').length && // Ignore dropdown menu clicks
+      !$(e.target).closest('#mentionDropdown').length // Ignore mention dropdown clicks
+      ) {
+      $('#closeTaskPanel').trigger('click');
+  }
+});
+
+  // Kanban Edit Task
+  $(document).on('click', '.kanban-task-edit', function(e) {
+    e.preventDefault();
+    var taskId = $(this).data('task-id');
+    window.location.href = '/tasks/' + taskId + '/edit/';
+  });
+
+  // Kanban Delete Task
+  $(document).on('click', '.kanban-task-delete', function(e) {
+    e.preventDefault();
+    var taskId = $(this).data('task-id');
+    Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+      $.ajax({
+        url: '/tasks/' + taskId + '/delete/',
+        type: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        success: function() {
+          $('.kanban-task[data-task-id="' + taskId + '"]').remove();
+          updateTaskCounts(); // Update task counts after deletion
+          if($('#taskDetailPanel').is(':visible')) $('#closeTaskPanel').trigger('click');
+        },
+        error: function() {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to delete task.',
+            confirmButtonColor: '#dc3545'
+          });
+        }
+      });
+      }
+    });
+  });
+});
+$(document).on('change', '.task-status-dropdown', function() {
+  const $select = $(this);
+  const taskId = $select.data('task-id');
+  const newStatusId = $select.val();
+  $select.prop('disabled', true); // Optional: disable while updating
+
+  $.ajax({
+    url: `/task/${taskId}/update_status/`, // You may need to adjust this URL to match your Django URL pattern
+    type: 'POST',
+    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+    contentType: 'application/json',
+    data: JSON.stringify({ status_id: newStatusId }),
+    success: function() {
+      // Optionally show a success indicator
+      $select.prop('disabled', false);
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Status changed successfully',
+        confirmButtonColor: '#28a745',
+        timer: 1500,
+        showConfirmButton: false
+      }).then(() => {
+        location.reload();
+      });
+    },
+    error: function() {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to update status',
+        confirmButtonColor: '#dc3545'
+      });
+      $select.prop('disabled', false);
+    }
+  });
+});
+
+// Copy to clipboard function
+function copyToClipboard(elementId) {
+  const element = document.getElementById(elementId);
+  let textToCopy = '';
+  
+  // Handle different element types
+  if (element.tagName === 'INPUT') {
+    textToCopy = element.value;
+    element.select();
+    element.setSelectionRange(0, 99999); // For mobile devices
+  } else if (element.tagName === 'A') {
+    textToCopy = element.href;
+  } else {
+    textToCopy = element.textContent || element.innerText;
+  }
+  
+  // Copy to clipboard
+  navigator.clipboard.writeText(textToCopy).then(function() {
+    // Show feedback
+    const button = element.nextElementSibling;
+    const originalIcon = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-check text-success"></i>';
+    button.classList.add('btn-success');
+    button.classList.remove('btn-outline-secondary');
+    
+    setTimeout(() => {
+      button.innerHTML = originalIcon;
+      button.classList.remove('btn-success');
+      button.classList.add('btn-outline-secondary');
+    }, 1500);
+  }).catch(function(err) {
+    // Fallback for older browsers
+    document.execCommand('copy');
+    
+    // Show feedback
+    const button = element.nextElementSibling;
+    const originalIcon = button.innerHTML;
+    button.innerHTML = '<i class="fa-solid fa-check text-success"></i>';
+    button.classList.add('btn-success');
+    button.classList.remove('btn-outline-secondary');
+    
+    setTimeout(() => {
+      button.innerHTML = originalIcon;
+      button.classList.remove('btn-success');
+      button.classList.add('btn-outline-secondary');
+    }, 1500);
+  });
+}
+
+// Toggle password visibility
+function togglePasswordVisibility(elementId) {
+  const element = document.getElementById(elementId);
+  const icon = document.getElementById('passwordToggleIcon');
+  
+  if (element.type === 'password') {
+    element.type = 'text';
+    icon.className = 'fa-solid fa-eye-slash';
+  } else {
+    element.type = 'password';
+    icon.className = 'fa-solid fa-eye';
+  }
+}
+
+// Document search and filter functionality
+$(document).ready(function() {
+  function filterDocuments() {
+    const searchTerm = $('#documentSearch').val().toLowerCase();
+    const typeFilter = $('#documentTypeFilter').val();
+    const taskFilter = $('#taskFilter').val();
+    
+    let visibleCount = 0;
+    
+    $('.document-item').each(function() {
+      const $item = $(this);
+      const fileName = $item.data('file-name').toLowerCase();
+      const taskTitle = $item.data('task-title').toLowerCase();
+      const fileType = $item.data('file-type');
+      const taskId = $item.data('task-id').toString();
+      
+      const matchesSearch = fileName.includes(searchTerm) || taskTitle.includes(searchTerm);
+      const matchesType = !typeFilter || fileType === typeFilter;
+      const matchesTask = !taskFilter || taskId === taskFilter;
+      
+      if (matchesSearch && matchesType && matchesTask) {
+        $item.show();
+        visibleCount++;
+      } else {
+        $item.hide();
+      }
+    });
+    
+    $('#documentCount').text(visibleCount + ' documents');
+    
+    // Show no results message if needed
+    if (visibleCount === 0) {
+      if ($('#noResultsMessage').length === 0) {
+        $('#documentsGrid').append(`
+          <div id="noResultsMessage" class="col-12">
+            <div class="text-center py-5">
+              <i class="fa-solid fa-search fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">No documents found</h5>
+              <p class="text-muted">Try adjusting your search or filter criteria.</p>
+            </div>
+          </div>
+        `);
+      }
+    } else {
+      $('#noResultsMessage').remove();
+    }
+  }
+  
+  // Bind filter events
+  $('#documentSearch, #documentTypeFilter, #taskFilter').on('input change', filterDocuments);
+  
+  // Reset filters and sort documents when modal is shown
+  $('#projectDocumentsModal').on('show.bs.modal', function() {
+    $('#documentSearch').val('');
+    $('#documentTypeFilter').val('');
+    $('#taskFilter').val('');
+    
+    // Sort documents by upload date (newest first)
+    const $documentsGrid = $('#documentsGrid');
+    const $documentItems = $documentsGrid.find('.document-item').detach();
+    
+    $documentItems.sort(function(a, b) {
+      const dateA = new Date($(a).data('upload-date'));
+      const dateB = new Date($(b).data('upload-date'));
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    $documentsGrid.append($documentItems);
+    filterDocuments();
+  });
+
+  // Archive Tasks Modal functionality
+  $('#archiveTasksModal').on('show.bs.modal', function() {
+    loadArchivedTasks();
+  });
+
+  function loadArchivedTasks() {
+    const $archivedList = $('#archivedTasksList');
+    $archivedList.html(`
+      <div class="text-center py-5">
+        <div class="spinner-border text-warning" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 class="text-muted mt-3">Loading archived tasks...</h5>
+      </div>
+    `);
+
+    $.ajax({
+      url: `/projects/{{ project.id }}/archived_tasks/`,
+      type: 'GET',
+      success: function(data) {
+        if (data.tasks && data.tasks.length > 0) {
+          displayArchivedTasks(data.tasks);
+        } else {
+          $archivedList.html(`
+            <div class="text-center py-5">
+              <i class="fa-solid fa-archive fa-3x text-muted mb-3"></i>
+              <h5 class="text-muted">No archived tasks found</h5>
+              <p class="text-muted">There are no completed tasks older than 30 days to archive.</p>
+            </div>
+          `);
+        }
+        $('#archiveCount').text(data.tasks ? data.tasks.length + ' tasks' : '0 tasks');
+      },
+      error: function() {
+        $archivedList.html(`
+          <div class="text-center py-5">
+            <i class="fa-solid fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+            <h5 class="text-danger">Error loading archived tasks</h5>
+            <p class="text-muted">Please try again later.</p>
+          </div>
+        `);
+      }
+    });
+  }
+
+  function displayArchivedTasks(tasks) {
+    const $archivedList = $('#archivedTasksList');
+    let html = '<div class="row g-3">';
+    
+    tasks.forEach(task => {
+      const completedDate = new Date(task.completed_at);
+      const daysAgo = Math.floor((new Date() - completedDate) / (1000 * 60 * 60 * 24));
+      
+      html += `
+        <div class="col-12 archived-task-item" 
+             data-task-id="${task.id}" 
+            data-assignee-id="${task.assigned_to_id}"
+             data-days-ago="${daysAgo}"
+             data-task-title="${task.title.toLowerCase()}">
+          <div class="card border-0 shadow-sm archived-task-card">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="card-title mb-0 fw-semibold">${task.title}</h6>
+                <span class="badge bg-warning text-dark">
+                  <i class="fa-solid fa-clock me-1"></i>${daysAgo} days ago
+                </span>
+              </div>
+              
+              <div class="d-flex align-items-center mb-2">
+                <span class="badge bg-light text-dark me-2">
+                  <i class="fas fa-user-circle me-1"></i>${task.assigned_to_name}
+                </span>
+                <span class="badge bg-success">
+                  <i class="fa-solid fa-check me-1"></i>Completed
+                </span>
+              </div>
+              
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                  <i class="far fa-calendar me-1"></i>Completed: ${completedDate.toLocaleDateString()}
+                </small>
+                <button class="btn btn-outline-primary btn-sm" onclick="viewArchivedTask(${task.id}); return false;" data-bs-dismiss="false">
+                  <i class="fa-solid fa-eye me-1"></i>View Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    $archivedList.html(html);
+  }
+
+  // Archive task filtering
+  function filterArchivedTasks() {
+    const searchTerm = $('#archiveSearch').val().toLowerCase();
+    const assigneeFilter = $('#archiveAssigneeFilter').val();
+    const dateFilter = $('#archiveDateFilter').val();
+    
+    let visibleCount = 0;
+    
+    $('.archived-task-item').each(function() {
+      const $item = $(this);
+      const taskTitle = $item.data('task-title');
+      const assigneeId = $item.data('assignee-id').toString();
+      const daysAgo = $item.data('days-ago');
+      
+      const matchesSearch = taskTitle.includes(searchTerm);
+      const matchesAssignee = !assigneeFilter || assigneeId === assigneeFilter;
+      const matchesDate = !dateFilter || (
+        (dateFilter === '30-60' && daysAgo >= 30 && daysAgo <= 60) ||
+        (dateFilter === '60-90' && daysAgo >= 60 && daysAgo <= 90) ||
+        (dateFilter === '90+' && daysAgo > 90)
+      );
+      
+      if (matchesSearch && matchesAssignee && matchesDate) {
+        $item.show();
+        visibleCount++;
+      } else {
+        $item.hide();
+      }
+    });
+    
+    $('#archiveCount').text(visibleCount + ' tasks');
+  }
+
+  // Bind archive filter events
+  $('#archiveSearch, #archiveAssigneeFilter, #archiveDateFilter').on('input change', filterArchivedTasks);
+
+  // Function to view archived task details
+  window.viewArchivedTask = function(taskId) {
+    // Prevent modal from closing and stop event propagation
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Open the task detail panel
+    $('#taskDetailPanel').css({right: '-500px', display: 'block'}).animate({right: '0'}, 300);
+    
+    // Load task details
+    $('#taskDetailContent').html('<div class="text-center my-5"><div class="spinner-border"></div></div>');
+    $.ajax({
+      url: `/tasks/${taskId}/panel/`,
+      type: 'GET',
+      success: function(data) {
+        $('#taskDetailContent').html(data);
+      },
+      error: function() {
+        $('#taskDetailContent').html('<div class="text-center text-danger">Failed to load task details.</div>');
+      }
+    });
+  };
+});
+</script>
+{% endblock %}

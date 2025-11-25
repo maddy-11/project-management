@@ -1,0 +1,66 @@
+{% extends 'clients/home.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container my-5">
+  <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+    <div class="card-header py-3 bg-light">
+      <div class="d-flex align-items-center justify-content-between">
+        <h2 class="h5 mb-0 fw-bold">
+          <i class="fa-solid fa-handshake me-2"></i>
+          Add New Referrer
+        </h2>
+        <a href="{% url 'referrer_list' %}" class="btn btn-sm btn-light">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+    </div>
+
+    <form method="post" class="card-body">
+      {% csrf_token %}
+
+      <!-- Basic Info -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-id-card me-2"></i>Basic Information
+        </h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-medium">Name</label>
+            {% render_field form.name class="form-control" placeholder="Enter referrer name" %}
+            {% if form.name.errors %}<div class="invalid-feedback d-block">{{ form.name.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-medium">Email</label>
+            {% render_field form.email class="form-control" placeholder="example@email.com" %}
+            {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-medium">Phone</label>
+            {% render_field form.phone class="form-control" placeholder="+123456789" %}
+            {% if form.phone.errors %}<div class="invalid-feedback d-block">{{ form.phone.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-12">
+            <label class="form-label fw-medium">Address</label>
+            {% render_field form.address class="form-control" placeholder="address" %}
+            {% if form.phone.errors %}<div class="invalid-feedback d-block">{{ form.address.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Bank -->
+      <div class="mb-4">
+        <label class="form-label fw-medium">Bank Account</label>
+        {% render_field form.bank_account class="form-control" %}
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-4 d-flex justify-content-end gap-3 border-top pt-4">
+        <a href="{% url 'referrer_list' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Save Referrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

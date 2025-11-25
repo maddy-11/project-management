@@ -1,0 +1,17 @@
+{% extends 'clients/home.html' %}
+{% block content %}
+<div class="container my-5">
+  <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+    <div class="card-body text-center py-5">
+      <i class="fa-solid fa-triangle-exclamation fa-3x text-danger mb-3"></i>
+      <h3 class="mb-3">Delete Referrer</h3>
+      <p>Are you sure you want to delete <strong>{{ referrer.name }}</strong>?</p>
+      <form method="post" class="mt-4 d-flex justify-content-center gap-3">
+        {% csrf_token %}
+        <a href="{% url 'referrer_list' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

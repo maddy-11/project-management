@@ -1,0 +1,89 @@
+<div class="card shadow-lg border-0">
+    <div class="card-header bg-secondary text-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-file-invoice-dollar mr-2"></i>
+                Cash Flow Report: {{ start_date }} to {{ end_date }}
+            </h5>
+            <span class="badge bg-white text-primary">
+                <i class="fas fa-calendar-alt mr-1"></i>
+                {{ transactions|length }} transactions
+            </span>
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if conversion_note %}
+        <div class="alert alert-info alert-dismissible fade show m-3 shadow-sm">
+            <i class="fas fa-info-circle mr-2"></i>
+            {{ conversion_note }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+        
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="thead-light">
+                    <tr>
+                        <th class="ps-4">Date</th>
+                        <th>Description</th>
+                        <th class="text-end pe-4">Amount</th>
+                        <th class="text-end pe-4">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="table-active">
+                        <td class="ps-4 fw-bold" colspan="2">Opening Balance</td>
+                        <td class="text-end pe-4"></td>
+                        <td class="text-end pe-4 fw-bold">{{ opening_balance }}</td>
+                    </tr>
+                    
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="ps-4">{{ t.date|date:"M d, Y" }}</td>
+                        <td>
+                            {{ t.description }}
+                            {% if t.converted %}
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-exchange-alt"></i>
+                                {{ t.original_amount }} USD @ {{ t.rate|floatformat:2 }}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4 {% if t.amount >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ t.amount }}
+                        </td>
+                        <td class="text-end pe-4">{{ t.balance|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                    
+                    <tr class="table-active">
+                        <td class="ps-4 fw-bold" colspan="2">Closing Balance</td>
+                        <td class="text-end pe-4"></td>
+                        <td class="text-end pe-4 fw-bold">{{ closing_balance|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card-footer bg-light">
+        <div class="row">
+            <div class="col-md-6">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Showing {{ transactions|length }} transactions
+                </small>
+            </div>
+            <div class="col-md-6 text-end d-none">
+                <button class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-download mr-1"></i> Export
+                </button>
+                <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-print mr-1"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

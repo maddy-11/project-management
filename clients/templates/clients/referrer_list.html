@@ -1,0 +1,302 @@
+{% extends 'clients/home.html' %}
+{% block content %}
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0 me-4">
+                <div class="logo-container bg-white p-3 rounded-circle shadow-sm">
+                  <i class="fas fa-handshake fa-3x text-primary"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <h1 class="h3 text-dark fw-bold mb-2">Referrer Management</h1>
+                <p class="text-muted mb-0">Manage your business referrers and their information</p>
+              </div>
+            </div>
+            <div class="flex-shrink-0">
+              {% if request.user.role.name == 'Management' %}
+              <a href="{% url 'referrer_create' %}" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add Referrer
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Referrers Table Section -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card shadow-sm border-0">
+        <div class="card-header header-gradient text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #326597 !important;">
+          <h5 class="card-title mb-0" style="color: white !important;">
+            <i class="fas fa-handshake me-2"></i>Referrer Directory
+          </h5>
+          <span class="badge" style="background-color: rgba(255,255,255,0.9) !important; color: #326597 !important;">{{ referrers|length }} referrers</span>
+        </div>
+        <div class="card-body p-0">
+          {% if referrers %}
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="border-0 py-3 px-4">
+                      <i class="fas fa-user me-2 text-primary"></i>Name
+                    </th>
+                    <th class="border-0 py-3">
+                      <i class="fas fa-envelope me-2 text-primary"></i>Email
+                    </th>
+                    <th class="border-0 py-3">
+                      <i class="fas fa-phone me-2 text-primary"></i>Phone
+                    </th>
+                    <th class="border-0 py-3">
+                      <i class="fas fa-university me-2 text-primary"></i>Bank Account
+                    </th>
+                    {% if request.user.role.name == 'Management' %}
+                    <th class="border-0 py-3 text-center">
+                      <i class="fas fa-cogs me-2 text-primary"></i>Actions
+                    </th>
+                    {% endif %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in referrers %}
+                  <tr class="referrer-row">
+                    <td class="py-3 px-4">
+                      <div class="d-flex align-items-center">
+                        <div class="referrer-icon me-3">
+                          <i class="fas fa-handshake fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                          <h6 class="mb-0 fw-semibold">{{ r.name }}</h6>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-3">
+                      <span class="text-muted">{{ r.email }}</span>
+                    </td>
+                    <td class="py-3">
+                      <span class="text-muted">{{ r.phone }}</span>
+                    </td>
+                    <td class="py-3">
+                      {% if r.bank_account %}
+                        <span class="badge bg-success">{{ r.bank_account }}</span>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+                    {% if request.user.role.name == 'Management' %}
+                    <td class="py-3 text-center">
+                      <div class="d-flex gap-2 justify-content-center">
+                        <a href="{% url 'referrer_update' r.pk %}" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-edit me-1"></i>Edit
+                        </a>
+                        <a href="{% url 'referrer_delete' r.pk %}" class="btn btn-sm btn-outline-danger">
+                          <i class="fas fa-trash me-1"></i>Delete
+                        </a>
+                      </div>
+                    </td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <div class="py-4">
+                <i class="fas fa-handshake fa-4x text-light mb-3"></i>
+                <h5 class="text-muted">No Referrers Yet</h5>
+                <p class="text-muted mb-4">Add your first business referrer to get started.</p>
+                {% if request.user.role.name == 'Management' %}
+                <a href="{% url 'referrer_create' %}" class="btn btn-primary">
+                  <i class="fas fa-user-plus me-2"></i>Add Your First Referrer
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+<style>
+  body {
+    background-color: #f5f7f9;
+    color: #343a40;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+  
+  .card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border: none;
+  }
+  
+  .logo-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .header-gradient {
+    background: #326597 !important;
+    border: none !important;
+  }
+  
+  .card-header.header-gradient {
+    background: #326597 !important;
+  }
+  
+  .card-header .card-title {
+    color: white !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  
+  .card-header .badge {
+    background-color: rgba(255,255,255,0.9) !important;
+    color: #326597 !important;
+    font-weight: 600;
+  }
+  
+  .card-header {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .card-header:hover::before {
+    left: 100%;
+  }
+  
+  .table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  
+  .table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+  
+  .referrer-row {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f1f3f4;
+  }
+  
+  .referrer-row:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+  }
+  
+  .referrer-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .btn-primary {
+    background: linear-gradient(to right, #326597, #2c5aa0);
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(to right, #2c5aa0, #326597);
+  }
+  
+  .d-flex .btn {
+    border-radius: 20px;
+    margin: 0;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-outline-primary {
+    border-color: #326597;
+    color: #326597;
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #326597;
+    border-color: #326597;
+    transform: translateY(-2px);
+  }
+  
+  .btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+  }
+  
+  .btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    transform: translateY(-2px);
+  }
+  
+  .badge {
+    border-radius: 15px;
+    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+  
+  .badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+  }
+  
+  .table-responsive {
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+  }
+  
+  table.table th, table.table td {
+    white-space: nowrap;
+  }
+</style>

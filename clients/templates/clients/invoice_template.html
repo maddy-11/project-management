@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    @page {
+        size: A4;
+        margin: 30px;
+    }
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        color: #000;
+    }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+    }
+    .logo {
+        width: 150px;
+    }
+    .contact {
+        text-align: right;
+        line-height: 1.5;
+    }
+    h1 {
+        text-align: center;
+        margin: 20px 0;
+        font-size: 20px;
+    }
+    .invoice-info, .client-info {
+        margin-bottom: 10px;
+        line-height: 1.5;
+    }
+    .client-info strong {
+        display: inline-block;
+        width: 120px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    th, td {
+        border: 1px solid #000;
+        padding: 6px 8px;
+    }
+    th {
+        background: #f2f2f2;
+        font-weight: bold;
+    }
+    .right {
+        text-align: right;
+    }
+    .total-row {
+        font-weight: bold;
+    }
+    .bank-details {
+        margin-top: 20px;
+        line-height: 1.6;
+    }
+    .signature {
+        margin-top: 40px;
+        line-height: 1.6;
+    }
+    .footer {
+        position: relative;
+        margin-top: 40px;
+        text-align: center;
+    }
+
+    .footer-line {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 8px;
+        background: #333;
+        transform: translateY(-50%);
+        z-index: 0;
+    }
+
+    .footer-banner {
+        display: inline-block;
+        position: relative;
+        background: #007699; /* teal-blue */
+        color: white;
+        padding: 10px 40px;
+        font-size: 14px;
+        z-index: 1;
+    }
+
+    .footer-banner:before,
+    .footer-banner:after {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: 0;
+        height: 0;
+        border-top: 24px solid transparent;
+        border-bottom: 24px solid transparent;
+    }
+
+    .footer-banner:before {
+        left: -20px;
+        border-right: 20px solid #005f73;
+    }
+
+    .footer-banner:after {
+        right: -20px;
+        border-left: 20px solid #005f73;
+    }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <img src="{{ logo_url }}" alt="FineIT Logo" class="logo">
+        </div>
+        <div style="color: black; font-size: 16px; line-height: 2;">
+            +92 51 2300537 <i class="fa-solid fa-phone" style="color: green;"></i> <br>
+            +92 300 7105107 <i class="fa-solid fa-mobile-screen" style="color: green;"></i><br>
+            <a href="https://www.fineit.io" style="text-decoration: none; color: black;">www.fineit.io</a>
+            <i class="fa-solid fa-globe" style="color: green;"></i><br>
+            <a href="mailto:support@fineit.io" style="text-decoration: none; color: black;">support@fineit.io</a>
+            <i class="fa-solid fa-envelope" style="color: green;"></i> 
+        </div>
+    </div>
+
+    <h1>INVOICE</h1>
+
+    <div class="invoice-info">
+        <strong>Invoice No:</strong> {{ invoice_no }}<br>
+        <strong>Date:</strong> {{ date }}
+    </div>
+
+    <div class="client-info">
+        {{ client_name }}<br>
+        {{ client_position }}<br>
+        {{ client_company }}<br>
+        {{ client_address }}
+    </div>
+
+    <div class="invoice-info">
+        <strong>Project Reference:</strong> {{ project_ref }}<br>
+        <strong>Invoice Description:</strong>
+    </div>
+
+    <table>
+        <tr>
+            <th>Description</th>
+            <th>Amount in PKR</th>
+            <th>Total PKR</th>
+        </tr>
+        <tr>
+            <td>{{ description }}</td>
+            <td class="right">{{ amount|floatformat:0 }}</td>
+            <td class="right">{{ amount|floatformat:0 }}</td>
+        </tr>
+        <tr>
+            <td class="right" colspan="2">Amount</td>
+            <td class="right">{{ amount|floatformat:0 }}</td>
+        </tr>
+        <tr>
+            <td class="right" colspan="2">Sales Tax @{{ sales_tax_rate }}%</td>
+            <td class="right">{{ sales_tax|floatformat:0 }}</td>
+        </tr>
+        <tr class="total-row">
+            <td class="right" colspan="2">Total Amount</td>
+            <td class="right">{{ total|floatformat:0 }}</td>
+        </tr>
+    </table>
+
+    <div class="bank-details">
+        <strong>Bank Details:</strong><br>
+        Account Name: FINEIT (Private) Limited<br>
+        Bank Name: Bank Al Habib Limited<br>
+        Account No: PK29BAHL0216098100310401<br>
+        Branch Address: G-13 Markaz Branch, Islamabad<br>
+        NTN: 9607987-1<br>
+        STRN: 3277876366074
+    </div>
+
+    <div class="signature">
+        Any enquiries regarding this invoice may be directed to the undersigned.<br><br>
+        Regards,<br><br>
+        Kamran Saeed<br>
+        Finance Director<br>
+        Email: kamran@fineit.io<br>
+        Cell: 00-92-342 5000335
+    </div>
+
+    <div class="footer">
+        <div class="footer-line"></div>
+        <div class="footer-banner">
+            House No 62, Street 487, G13/1, Islamabad
+        </div>
+    </div>
+</body>
+</html>

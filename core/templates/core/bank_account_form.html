@@ -1,0 +1,167 @@
+{% extends 'clients/home.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container my-5">
+  <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+    <div class="card-header py-3 bg-light">
+      <div class="d-flex align-items-center justify-content-between">
+        <h2 class="h5 mb-0 fw-bold">
+          <i class="fa-solid fa-university me-2"></i> 
+          {{ form.instance.pk|yesno:"Edit Bank Account,Add New Bank Account" }}
+        </h2>
+        <a href="{% url 'bank-account-list' %}" class="btn btn-sm btn-light">
+          <i class="fa-solid fa-arrow-left me-1"></i> Back to List
+        </a>
+      </div>
+    </div>
+    
+    <form method="post" class="card-body">
+      {% csrf_token %}
+      
+      <!-- Bank Information Section -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-university me-2"></i>Bank Information
+        </h5>
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label for="id_bank_name" class="form-label fw-medium" style="color: #555;">
+              Bank Name {% if form.fields.bank_name.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.bank_name class="form-control" placeholder="Enter bank name" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.bank_name.errors %}<div class="invalid-feedback d-block">{{ form.bank_name.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Account Details Section -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-id-card me-2"></i>Account Details
+        </h5>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="id_account_number" class="form-label fw-medium" style="color: #555;">
+              Account Number {% if form.fields.account_number.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.account_number class="form-control" placeholder="Enter account number" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.account_number.errors %}<div class="invalid-feedback d-block">{{ form.account_number.errors }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <label for="id_account_holder_name" class="form-label fw-medium" style="color: #555;">
+              Account Holder Name {% if form.fields.account_holder_name.required %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% render_field form.account_holder_name class="form-control" placeholder="Enter account holder name" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+            {% if form.account_holder_name.errors %}<div class="invalid-feedback d-block">{{ form.account_holder_name.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Additional Information Section -->
+      <div class="mb-4">
+        <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+          <i class="fa-solid fa-info-circle me-2"></i>Additional Information
+        </h5>
+
+        <div class="row g-3">
+         <div class="col-md-3">
+          <label for="id_branch_address" class="form-label fw-medium" style="color: #555;">
+            Branch Address
+          </label>
+          {% render_field form.branch_address class="form-control" placeholder="Enter branch address" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.branch_address.errors %}<div class="invalid-feedback d-block">{{ form.branch_address.errors }}</div>{% endif %}
+        </div>
+        <div class="col-md-3">
+          <label for="id_branch_code" class="form-label fw-medium" style="color: #555;">
+            Branch Code
+          </label>
+          {% render_field form.branch_code class="form-control" placeholder="Enter branch code" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.branch_code.errors %}<div class="invalid-feedback d-block">{{ form.branch_code.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label for="id_bank_code" class="form-label fw-medium" style="color: #555;">
+            Bank Code
+          </label>
+          {% render_field form.bank_code class="form-control" placeholder="Enter bank code" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.bank_code.errors %}<div class="invalid-feedback d-block">{{ form.bank_code.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label for="id_swift_code" class="form-label fw-medium" style="color: #555;">
+            SWIFT Code
+          </label>
+          {% render_field form.swift_code class="form-control" placeholder="Enter SWIFT code" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.swift_code.errors %}<div class="invalid-feedback d-block">{{ form.swift_code.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mt-2">
+        <div class="col-md-4">
+          <label for="id_iban" class="form-label fw-medium" style="color: #555;">
+            IBAN
+          </label>
+          {% render_field form.iban class="form-control" placeholder="Enter IBAN" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.iban.errors %}<div class="invalid-feedback d-block">{{ form.iban.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label for="id_ntn" class="form-label fw-medium" style="color: #555;">
+            NTN
+          </label>
+          {% render_field form.NTN class="form-control" placeholder="Enter NTN" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.NTN.errors %}<div class="invalid-feedback d-block">{{ form.NTN.errors }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-4">
+          <label for="id_strn" class="form-label fw-medium" style="color: #555;">
+            STRN
+          </label>
+          {% render_field form.STRN class="form-control" placeholder="Enter STRN" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.STRN.errors %}<div class="invalid-feedback d-block">{{ form.STRN.errors }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="row g-3 mt-2">
+        <div class="col-md-6">
+          <div class="form-check mt-4">
+            {% render_field form.is_active class="form-check-input" %}
+            <label class="form-check-label fw-medium" for="id_is_active" style="color: #555;">
+              Active Account
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes Section -->
+    <div class="mb-4">
+      <h5 class="mb-3 border-bottom pb-2" style="color: #4a4a8a;">
+        <i class="fa-solid fa-sticky-note me-2"></i>Notes
+      </h5>
+      <div class="row">
+        <div class="col-12">
+          <label for="id_notes" class="form-label fw-medium" style="color: #555;">
+            Additional Notes
+          </label>
+          {% render_field form.notes class="form-control" placeholder="Enter any additional notes" style="border-radius: 8px; border: 1px solid #e0e0e0;" %}
+          {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div class="d-flex justify-content-end gap-2">
+      <a href="{% url 'bank-account-list' %}" class="btn btn-light px-4">
+        <i class="fa-solid fa-times me-2"></i>Cancel
+      </a>
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="fa-solid fa-save me-2"></i>
+        {{ form.instance.pk|yesno:"Update,Save" }} Bank Account
+      </button>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %} 

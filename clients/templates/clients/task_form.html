@@ -1,0 +1,397 @@
+{% extends 'clients/home.html' %}
+{% load kanban_tags %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-9 col-md-10">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border py-3 d-flex align-items-center">
+          <i class="fa-solid fa-pen-to-square me-2 fs-5"></i>
+          <h5 class="mb-0">Edit Task</h5>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-4">
+              <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+              {% if field.name == 'assignees' %}
+                {{ field|add_class:"form-select assignees-select shadow-sm" }}
+              {% else %}
+                {{ field|add_class:"form-control shadow-sm" }}
+              {% endif %}
+              {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+              {% endif %}
+              {% if field.errors %}
+              <div class="text-danger small mt-1">
+                {{ field.errors|striptags }}
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+            <!-- Attachments -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold">
+                <i class="fa-solid fa-paperclip me-2 text-muted"></i>Attachments
+              </label>
+              
+              {% if attachments %}
+              <div class="attachments-container mb-3">
+                <div class="row g-2">
+                  {% for att in attachments %}
+                  <div class="col-12">
+                    <div class="attachment-item d-flex align-items-center p-3 bg-light rounded-3 border">
+                      <div class="attachment-icon me-3">
+                        {% with fname=att.file.name|lower %}
+                          {% if fname|slice:"-4:" == ".jpg" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-4:" == ".png" %}
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                              <i class="fa-solid fa-image text-success"></i>
+                            </div>
+                          {% elif fname|slice:"-4:" == ".pdf" %}
+                            <div class="bg-danger bg-opacity-10 rounded-circle p-2">
+                              <i class="fa-solid fa-file-pdf text-danger"></i>
+                            </div>
+                          {% elif fname|slice:"-4:" == ".doc" or fname|slice:"-5:" == ".docx" %}
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                              <i class="fa-solid fa-file-word text-primary"></i>
+                            </div>
+                          {% elif fname|slice:"-4:" == ".xls" or fname|slice:"-5:" == ".xlsx" %}
+                            <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                              <i class="fa-solid fa-file-excel text-success"></i>
+                            </div>
+                          {% else %}
+                            <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                              <i class="fa-solid fa-file text-secondary"></i>
+                            </div>
+                          {% endif %}
+                        {% endwith %}
+                      </div>
+                      
+                      <div class="attachment-info flex-grow-1 me-3">
+                        <div class="d-flex align-items-center">
+                          <h6 class="mb-0 fw-semibold text-truncate me-2" style="max-width: 200px;" title="{{ att.file.name|cut:'task_attachments/' }}">
+                            {{ att.file.name|cut:'task_attachments/' }}
+                          </h6>
+                          <small class="text-muted">
+                            <i class="fa-solid fa-calendar me-1"></i>
+                            {{ att.uploaded_at|date:"M d, Y" }}
+                          </small>
+                        </div>
+                        {% if att.file.name|lower|slice:"-4:" == ".png" or att.file.name|lower|slice:"-4:" == ".jpg" or att.file.name|lower|slice:"-5:" == ".jpeg" %}
+                        <div class="mt-2">
+                          <img src="{{ att.file.url }}" alt="Preview" class="img-thumbnail" style="max-height: 60px; max-width: 80px; object-fit: cover;">
+                        </div>
+                        {% endif %}
+                      </div>
+                      
+                      <div class="attachment-actions d-flex gap-2">
+                        <a href="{{ att.file.url }}" target="_blank" class="btn btn-outline-primary btn-sm" title="View">
+                          <i class="fa-solid fa-eye"></i>
+                        </a>
+                        <a href="{{ att.file.url }}" download class="btn btn-outline-success btn-sm" title="Download">
+                          <i class="fa-solid fa-download"></i>
+                        </a>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="submitDeleteAttachment('{{ att.id }}')" title="Remove">
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+              
+               <!-- File Upload Area -->
+               <div class="file-upload-area border-2 border-dashed border-light rounded-3 p-4 text-center position-relative">
+                 <div class="upload-content">
+                   <div class="upload-icon mb-3">
+                     <i class="fa-solid fa-cloud-arrow-up fa-2x text-muted"></i>
+                   </div>
+                   <h6 class="text-muted mb-2">Add New Attachments</h6>
+                   <p class="text-muted small mb-3">Drag and drop files here or click to browse</p>
+                   <div class="form-text mt-2">
+                     <i class="fa-solid fa-info-circle me-1"></i>
+                     Supported formats: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX (Max 10MB each)
+                   </div>
+                 </div>
+                 
+                 <!-- Selected Files Display -->
+                 <div class="selected-files mt-3" id="selectedFiles" style="display: none;">
+                   <div class="alert alert-info">
+                     <h6 class="mb-2"><i class="fa-solid fa-check-circle me-2"></i>Selected Files:</h6>
+                     <div id="fileList"></div>
+                   </div>
+                 </div>
+                 
+                 <input type="file" name="attachments" class="form-control" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx" id="fileInput" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+               </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-4">
+              <button type="submit" class="btn btn-success px-4">
+                <i class="fa-solid fa-save me-2"></i>Save Changes
+              </button>
+              <a href="{% url 'project-detail' task.project.pk %}" class="btn btn-outline-secondary px-4">
+                Cancel
+              </a>
+            </div>
+          </form>
+          <!-- Hidden form for deleting attachments -->
+          <form id="delete-attachment-form" method="post" style="display:none;">
+            {% csrf_token %}
+            <input type="hidden" name="delete_attachment" id="delete-attachment-id" value="">
+          </form>
+          <script>
+          function submitDeleteAttachment(attId) {
+            var form = document.getElementById('delete-attachment-form');
+            document.getElementById('delete-attachment-id').value = attId;
+            form.submit();
+          }
+        </script>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<style>
+.attachment-item {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef !important;
+}
+
+.attachment-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: #dee2e6 !important;
+}
+
+.file-upload-area {
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.file-upload-area:hover {
+  background: #e9ecef;
+  border-color: #adb5bd !important;
+}
+
+.file-upload-area.dragover {
+  background: #e3f2fd;
+  border-color: #1976d2 !important;
+  transform: scale(1.02);
+}
+
+.attachment-actions .btn {
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.attachment-actions .btn:hover {
+  transform: scale(1.1);
+}
+
+.attachment-icon {
+  min-width: 48px;
+}
+
+.attachment-info h6 {
+  font-size: 0.9rem;
+}
+
+.file-upload-area {
+  cursor: pointer;
+  position: relative;
+}
+
+.upload-icon {
+  transition: transform 0.3s ease;
+}
+
+.file-upload-area:hover .upload-icon {
+  transform: scale(1.1);
+}
+</style>
+{% endblock %}
+{% block js %}
+<script>
+$(document).ready(function() {
+  // Enhance assignees with Select2
+  function initAssigneesSelect($el){
+    if (!$el.length) return;
+    if ($el.data('select2')) return;
+    $el.select2({
+      theme: 'bootstrap-5',
+      width: '100%',
+      placeholder: 'Select assignees...',
+      allowClear: true,
+      closeOnSelect: false
+    });
+  }
+
+  // Load Select2 from CDN if not present
+  (function ensureSelect2(){
+    if (window.jQuery && $.fn.select2) {
+      initAssigneesSelect($('.assignees-select'));
+      return;
+    }
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css';
+    document.head.appendChild(link);
+
+    var bs5 = document.createElement('link');
+    bs5.rel = 'stylesheet';
+    bs5.href = 'https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css';
+    document.head.appendChild(bs5);
+
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js';
+    script.onload = function(){ initAssigneesSelect($('.assignees-select')); };
+    document.body.appendChild(script);
+  })();
+
+  // File upload area interactions
+  const $uploadArea = $('.file-upload-area');
+  const $fileInput = $('#fileInput');
+  
+  // Drag and drop functionality
+  $uploadArea.on('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $(this).addClass('dragover');
+  });
+  
+  $uploadArea.on('dragleave', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $(this).removeClass('dragover');
+  });
+  
+  $uploadArea.on('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    $(this).removeClass('dragover');
+    
+    const files = e.originalEvent.dataTransfer.files;
+    if (files.length > 0) {
+      $fileInput[0].files = files;
+      // Trigger change event to show selected files
+      $fileInput.trigger('change');
+    }
+  });
+  
+   // Show selected files
+   $fileInput.on('change', function() {
+     const files = this.files;
+     const $selectedFiles = $('#selectedFiles');
+     const $fileList = $('#fileList');
+     const $uploadContent = $uploadArea.find('.upload-content');
+     
+     if (files.length > 0) {
+       // Hide upload content and show selected files
+       $uploadContent.hide();
+       $selectedFiles.show();
+       
+       // Clear previous file list
+       $fileList.empty();
+       
+       // Add each file to the list
+       Array.from(files).forEach((file, index) => {
+         const fileSize = (file.size / 1024 / 1024).toFixed(2);
+         const fileIcon = getFileIcon(file.name);
+         
+         const fileItem = $(`
+           <div class="d-flex align-items-center justify-content-between p-2 mb-2 bg-white rounded border">
+             <div class="d-flex align-items-center">
+               <div class="me-3">
+                 <i class="${fileIcon} fa-lg"></i>
+               </div>
+               <div>
+                 <div class="fw-semibold text-truncate" style="max-width: 200px;" title="${file.name}">
+                   ${file.name}
+                 </div>
+                 <small class="text-muted">${fileSize} MB</small>
+               </div>
+             </div>
+             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSelectedFile(${index})">
+               <i class="fa-solid fa-times"></i>
+             </button>
+           </div>
+         `);
+         
+         $fileList.append(fileItem);
+       });
+       
+       // Add clear all button
+       if (files.length > 1) {
+         $fileList.append(`
+           <div class="text-center mt-2">
+             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllFiles()">
+               <i class="fa-solid fa-trash me-1"></i>Clear All
+             </button>
+           </div>
+         `);
+       }
+     } else {
+       // No files selected, show upload content
+       $selectedFiles.hide();
+       $uploadContent.show();
+     }
+   });
+   
+   // Reset upload area when form is submitted
+   $('form').on('submit', function() {
+     $selectedFiles.hide();
+     $uploadArea.find('.upload-content').show();
+   });
+   
+   // Function to get file icon based on extension
+   function getFileIcon(filename) {
+     const ext = filename.toLowerCase().split('.').pop();
+     switch(ext) {
+       case 'jpg':
+       case 'jpeg':
+       case 'png':
+       case 'gif':
+         return 'fa-solid fa-image text-success';
+       case 'pdf':
+         return 'fa-solid fa-file-pdf text-danger';
+       case 'doc':
+       case 'docx':
+         return 'fa-solid fa-file-word text-primary';
+       case 'xls':
+       case 'xlsx':
+         return 'fa-solid fa-file-excel text-success';
+       case 'txt':
+         return 'fa-solid fa-file-text text-secondary';
+       default:
+         return 'fa-solid fa-file text-secondary';
+     }
+   }
+   
+   // Function to remove a specific file
+   window.removeSelectedFile = function(index) {
+     const dt = new DataTransfer();
+     const files = $fileInput[0].files;
+     
+     for (let i = 0; i < files.length; i++) {
+       if (i !== index) {
+         dt.items.add(files[i]);
+       }
+     }
+     
+     $fileInput[0].files = dt.files;
+     $fileInput.trigger('change');
+   };
+   
+   // Function to clear all files
+   window.clearAllFiles = function() {
+     $fileInput.val('');
+     $fileInput.trigger('change');
+   };
+});
+</script>
+{% endblock %}

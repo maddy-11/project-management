@@ -1,0 +1,144 @@
+{% extends "clients/base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Revenue Report</h1>
+        <div class="d-none">
+            <button class="btn btn-sm btn-primary shadow-sm" id="print-report">
+                <i class="fas fa-print fa-sm text-white-50"></i> Print Report
+            </button>
+            <button class="btn btn-sm btn-success shadow-sm" id="export-pdf">
+                <i class="fas fa-file-pdf fa-sm text-white-50"></i> Export PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-secondary text-white">
+            <h6 class="m-0 font-weight-bold">
+                <i class="fas fa-filter"></i> Report Filters
+            </h6>
+        </div>
+        <div class="card-body">
+            <form id="filter-form" class="form-inline">
+                <div class="form-group mr-3 mb-2">
+                    <label for="report_type" class="mr-2 font-weight-bold text-gray-700">Report Type:</label>
+                    <select name="report_type" id="report_type" class="form-control border-primary">
+                        <option value="quarterly" selected>Quarterly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div class="form-group mr-3 mb-2" id="quarter_group">
+                    <label for="quarter" class="mr-2 font-weight-bold text-gray-700">Quarter:</label>
+                    <select name="quarter" id="quarter" class="form-control border-primary">
+                        <option value="mar" selected>Mar-May</option>
+                        <option value="jun">Jun-Aug</option>
+                        <option value="sep">Sep-Nov</option>
+                        <option value="dec">Dec-Feb</option>
+                    </select>
+                    <small class="form-text text-muted">Select the quarter period</small>
+                </div>
+                <div class="form-group mr-3 mb-2" id="year_group">
+                    <label for="year" class="mr-2 font-weight-bold text-gray-700">Year:</label>
+                    <select name="year" id="year" class="form-control border-primary">
+                        <!-- Years will be populated by JavaScript -->
+                    </select>
+                    <small class="form-text text-muted">Select the year for the report</small>
+                </div>
+                <div class="form-group mr-3 mb-2">
+                    <label for="invoice_type" class="mr-2 font-weight-bold text-gray-700">Invoice Type:</label>
+                    <select name="invoice_type" id="invoice_type" class="form-control border-primary">
+                        <option value="invoices_sent" selected>Invoices Sent</option>
+                        <option value="cash_received">Cash Received</option>
+                    </select>
+                    <small class="form-text text-muted">Select invoice type to view</small>
+                </div>
+                <div class="form-group mb-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter"></i> Apply Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="report-data">
+        <!-- Report data will be loaded here via AJAX -->
+    </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+$(document).ready(function() {
+    // Populate years dropdown (last 5 years)
+    var currentYear = new Date().getFullYear();
+    var yearSelect = $('#year');
+    for (var i = 0; i < 5; i++) {
+        var year = currentYear - i;
+        yearSelect.append('<option value="' + year + '">' + year + '</option>');
+    }
+    yearSelect.val(currentYear); // Set current year as default
+
+    function fetchReport() {
+        $('#report-data').html(`
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-2">Generating report...</p>
+            </div>
+        `);
+        
+        $.ajax({
+            url: "{% url 'reports:revenue_report_data' %}",
+            data: $('#filter-form').serialize(),
+            success: function(data) {
+                $('#report-data').html(data);
+            },
+            error: function() {
+                $('#report-data').html(`
+                    <div class="alert alert-danger shadow-sm">
+                        <i class="fas fa-exclamation-triangle"></i> Could not load report. Please try again.
+                    </div>
+                `);
+            }
+        });
+    }
+
+    function setFilterVisibility() {
+        var reportType = $('#report_type').val();
+        if (reportType === 'quarterly') {
+            $('#quarter_group').show();
+            $('#year_group').show(); // Show both quarter and year for quarterly reports
+        } else {
+            $('#quarter_group').hide();
+            $('#year_group').show(); // Only show year for yearly reports
+        }
+    }
+
+    $('#filter-form').on('submit', function(e) {
+        e.preventDefault();
+        fetchReport();
+    });
+
+    $('#report_type').on('change', function() {
+        setFilterVisibility();
+        fetchReport();
+    });
+
+    $('#quarter, #year, #invoice_type').on('change', function() {
+        fetchReport();
+    });
+
+    $('#print-report').click(function() {
+        window.print();
+    });
+
+    // Set initial visibility and fetch report
+    setFilterVisibility();
+    fetchReport();
+});
+</script>
+{% endblock %}

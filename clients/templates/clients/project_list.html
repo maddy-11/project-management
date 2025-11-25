@@ -1,0 +1,559 @@
+{% extends 'clients/home.html' %}
+{% block content %}
+<div class="container-fluid">
+  <!-- Header Section -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <div class="flex-shrink-0 me-4">
+                <div class="logo-container bg-white p-3 rounded-circle shadow-sm">
+                  <i class="fas fa-diagram-project fa-3x text-primary"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <h1 class="h3 text-dark fw-bold mb-2">Project Management</h1>
+                <p class="text-muted mb-0">Manage your projects and track their progress</p>
+              </div>
+            </div>
+            <div class="flex-shrink-0">
+              {% if request.user.role.name == 'Management' %}
+              <a href="{% url 'project-create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Project
+              </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Professional Filter and Search Section -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header header-gradient text-white" style="background-color: #326597 !important;">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-filter me-2" style="color: white !important;"></i>
+        <h6 class="mb-0 fw-semibold" style="color: white !important;">Filter & Search Projects</h6>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <!-- Search Input -->
+        <div class="col-md-4">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+              <i class="fa-solid fa-search text-muted"></i>
+            </span>
+            <input type="text" class="form-control border-start-0" id="projectSearch" placeholder="Search projects by name or partner...">
+          </div>
+        </div>
+        
+        <!-- Partner Filter -->
+        <div class="col-md-3">
+          <select class="form-select" id="partnerFilter">
+            <option value="">All Partners</option>
+            {% for partner in partners %}
+            <option value="{{ partner.id }}">{{ partner.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Project Type Filter -->
+        <div class="col-md-2">
+          <select class="form-select" id="typeFilter">
+            <option value="">All Types</option>
+            <option value="local">Local</option>
+            <option value="overseas">Overseas</option>
+          </select>
+        </div>
+        
+        <!-- Currency Filter -->
+        <div class="col-md-2">
+          <select class="form-select" id="currencyFilter">
+            <option value="">All Currencies</option>
+            <option value="PKR">PKR</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+        
+        <!-- Clear Filters Button -->
+        <div class="col-md-1">
+          <button class="btn btn-outline-secondary w-100" id="clearFilters" title="Clear all filters">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Results Summary -->
+      <div class="mt-3 d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+          <span id="projectCount">{{ projects|length }}</span> projects found
+        </small>
+        <div class="d-flex align-items-center">
+          <small class="text-muted me-2">Sort by:</small>
+          <select class="form-select form-select-sm" id="sortBy" style="width: auto;">
+            <option value="name">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+            <option value="partner">Partner (A-Z)</option>
+            <option value="partner-desc">Partner (Z-A)</option>
+            <option value="type">Type</option>
+            <option value="currency">Currency</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header header-gradient text-white py-3 d-flex justify-content-between align-items-center" style="background-color: #326597 !important;">
+      <h5 class="card-title mb-0" style="color: white !important;">
+        <i class="fas fa-diagram-project me-2"></i>Project Directory
+      </h5>
+      <span class="badge" style="background-color: rgba(255,255,255,0.9) !important; color: #326597 !important;">{{ projects|length }} projects</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="projectsTable">
+          <thead class="table-light">
+            <tr>
+              <th class="border-0 py-3 px-4">
+                <i class="fas fa-hashtag me-2 text-primary"></i>#
+              </th>
+              <th class="border-0 py-3">
+                <i class="fas fa-diagram-project me-2 text-primary"></i>Project Name
+              </th>
+              <th class="border-0 py-3">
+                <i class="fas fa-handshake me-2 text-primary"></i>Partner
+              </th>
+              <th class="border-0 py-3">
+                <i class="fas fa-tag me-2 text-primary"></i>Type
+              </th>
+              <th class="border-0 py-3">
+                <i class="fas fa-dollar-sign me-2 text-primary"></i>Currency
+              </th>
+              <th class="border-0 py-3 text-center">
+                <i class="fas fa-cogs me-2 text-primary"></i>Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for project in projects %}
+            <tr class="project-row" 
+                data-project-name="{{ project.name|lower }}"
+                data-partner-name="{{ project.partner.name|lower }}"
+                data-partner-id="{{ project.partner.id }}"
+                data-project-type="{{ project.project_type }}"
+                data-currency="{{ project.currency }}">
+              <td class="fw-semibold text-muted">{{ forloop.counter }}</td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                    <i class="fa-solid fa-diagram-project text-primary"></i>
+                  </div>
+                  <div>
+                    <h6 class="mb-0 fw-semibold">{{ project.name }}</h6>
+                    {% if project.description %}
+                    <small class="text-muted">{{ project.description|truncatechars:50 }}</small>
+                    {% endif %}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="bg-info bg-opacity-10 rounded-circle p-2 me-2">
+                    <i class="fa-solid fa-handshake text-info"></i>
+                  </div>
+                  <span class="fw-medium">{{ project.partner.name }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge {% if project.project_type == 'local' %}bg-success{% else %}bg-warning{% endif %}">
+                  <i class="fa-solid fa-{% if project.project_type == 'local' %}home{% else %}globe{% endif %} me-1"></i>
+                  {{ project.project_type|title }}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-light text-dark">
+                  <i class="fa-solid fa-{% if project.currency == 'PKR' %}rupee-sign{% else %}dollar-sign{% endif %} me-1"></i>
+                  {{ project.currency }}
+                </span>
+              </td>
+              <td class="text-center">
+                <div class="d-flex gap-2 justify-content-center">
+                  <a href="{% url 'project-detail' project.pk %}" class="btn btn-sm btn-outline-info" title="Manage Project">
+                    <i class="fas fa-gear me-1"></i>Manage
+                  </a>
+                  {% if request.user.role.name == 'Management' or request.user.role.name == 'Project Manager' %}
+                  <a href="{% url 'project-update' project.pk %}" class="btn btn-sm btn-outline-primary" title="Edit Project">
+                    <i class="fas fa-edit me-1"></i>Edit
+                  </a>
+                  <a href="{% url 'project-delete' project.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Project">
+                    <i class="fas fa-trash me-1"></i>Delete
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-5">
+                <div class="text-muted">
+                  <i class="fa-solid fa-folder-open fa-3x mb-3"></i>
+                  <h5>No projects found</h5>
+                  <p>Start by creating your first project.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- No Results Message (hidden by default) -->
+<div id="noResultsMessage" class="card shadow-sm" style="display: none;">
+  <div class="card-body text-center py-5">
+    <i class="fa-solid fa-search fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">No projects found</h5>
+    <p class="text-muted">Try adjusting your search or filter criteria.</p>
+    <button class="btn btn-outline-primary" id="clearFiltersFromNoResults">
+      <i class="fa-solid fa-times me-1"></i> Clear Filters
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+$(document).ready(function() {
+  // Filter and search functionality
+  function filterProjects() {
+    const searchTerm = $('#projectSearch').val().toLowerCase();
+    const partnerFilter = $('#partnerFilter').val();
+    const typeFilter = $('#typeFilter').val();
+    const currencyFilter = $('#currencyFilter').val();
+    
+    let visibleCount = 0;
+    let hasVisibleRows = false;
+    
+    $('.project-row').each(function() {
+      const $row = $(this);
+      const projectName = $row.data('project-name');
+      const partnerName = $row.data('partner-name');
+      const partnerId = $row.data('partner-id').toString();
+      const projectType = $row.data('project-type');
+      const currency = $row.data('currency');
+      
+      const matchesSearch = projectName.includes(searchTerm) || partnerName.includes(searchTerm);
+      const matchesPartner = !partnerFilter || partnerId === partnerFilter;
+      const matchesType = !typeFilter || projectType === typeFilter;
+      const matchesCurrency = !currencyFilter || currency === currencyFilter;
+      
+      if (matchesSearch && matchesPartner && matchesType && matchesCurrency) {
+        $row.show();
+        visibleCount++;
+        hasVisibleRows = true;
+      } else {
+        $row.hide();
+      }
+    });
+    
+    // Update project count
+    $('#projectCount').text(visibleCount);
+    
+    // Show/hide no results message
+    if (hasVisibleRows) {
+      $('#noResultsMessage').hide();
+      $('#projectsTable').show();
+    } else {
+      $('#projectsTable').hide();
+      $('#noResultsMessage').show();
+    }
+  }
+  
+  // Sort functionality
+  function sortProjects() {
+    const sortBy = $('#sortBy').val();
+    const $tbody = $('#projectsTable tbody');
+    const $rows = $tbody.find('.project-row').toArray();
+    
+    $rows.sort(function(a, b) {
+      const $a = $(a);
+      const $b = $(b);
+      
+      let aVal, bVal;
+      
+      switch(sortBy) {
+        case 'name':
+          aVal = $a.data('project-name');
+          bVal = $b.data('project-name');
+          return aVal.localeCompare(bVal);
+        case 'name-desc':
+          aVal = $a.data('project-name');
+          bVal = $b.data('project-name');
+          return bVal.localeCompare(aVal);
+        case 'partner':
+          aVal = $a.data('partner-name');
+          bVal = $b.data('partner-name');
+          return aVal.localeCompare(bVal);
+        case 'partner-desc':
+          aVal = $a.data('partner-name');
+          bVal = $b.data('partner-name');
+          return bVal.localeCompare(aVal);
+        case 'type':
+          aVal = $a.data('project-type');
+          bVal = $b.data('project-type');
+          return aVal.localeCompare(bVal);
+        case 'currency':
+          aVal = $a.data('currency');
+          bVal = $b.data('currency');
+          return aVal.localeCompare(bVal);
+        default:
+          return 0;
+      }
+    });
+    
+    // Re-append sorted rows
+    $tbody.empty();
+    $rows.forEach(function(row, index) {
+      $(row).find('td:first').text(index + 1); // Update row numbers
+      $tbody.append(row);
+    });
+  }
+  
+  // Clear all filters
+  function clearAllFilters() {
+    $('#projectSearch').val('');
+    $('#partnerFilter').val('');
+    $('#typeFilter').val('');
+    $('#currencyFilter').val('');
+    $('#sortBy').val('name');
+    filterProjects();
+    sortProjects();
+  }
+  
+  // Bind events
+  $('#projectSearch, #partnerFilter, #typeFilter, #currencyFilter').on('input change', function() {
+    filterProjects();
+  });
+  
+  $('#sortBy').on('change', function() {
+    sortProjects();
+  });
+  
+  $('#clearFilters, #clearFiltersFromNoResults').on('click', function() {
+    clearAllFilters();
+  });
+  
+  // Initialize
+  filterProjects();
+  sortProjects();
+});
+</script>
+
+<style>
+  body {
+    background-color: #f5f7f9;
+    color: #343a40;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+  
+  .card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border: none;
+  }
+  
+  .logo-container {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .header-gradient {
+    background: #326597 !important;
+    border: none !important;
+  }
+  
+  .card-header.header-gradient {
+    background: #326597 !important;
+  }
+  
+  .card-header .card-title {
+    color: white !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  
+  .card-header .badge {
+    background-color: rgba(255,255,255,0.9) !important;
+    color: #326597 !important;
+    font-weight: 600;
+  }
+  
+  .card-header {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .card-header:hover::before {
+    left: 100%;
+  }
+  
+  .table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  
+  .table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+  }
+  
+  .project-row {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f1f3f4;
+  }
+  
+  .project-row:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+  }
+  
+  .btn-primary {
+    background: linear-gradient(to right, #326597, #2c5aa0);
+    border: none;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(to right, #2c5aa0, #326597);
+  }
+  
+  .d-flex .btn {
+    border-radius: 20px;
+    margin: 0;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-outline-primary {
+    border-color: #326597;
+    color: #326597;
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #326597;
+    border-color: #326597;
+    transform: translateY(-2px);
+  }
+  
+  .btn-outline-info {
+    border-color: #17a2b8;
+    color: #17a2b8;
+  }
+  
+  .btn-outline-info:hover {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    transform: translateY(-2px);
+  }
+  
+  .btn-outline-danger {
+    border-color: #dc3545;
+    color: #dc3545;
+  }
+  
+  .btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    transform: translateY(-2px);
+  }
+  
+  .badge {
+    border-radius: 15px;
+    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    font-size: 0.75rem;
+  }
+  
+  .badge.bg-light {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+    color: #495057 !important;
+  }
+  
+  .badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+  }
+  
+  .badge.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14) !important;
+  }
+  
+  .table-responsive {
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+  }
+  
+  .form-control, .form-select {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+  }
+  
+  .form-control:focus, .form-select:focus {
+    border-color: #326597;
+    box-shadow: 0 0 0 0.2rem rgba(50, 101, 151, 0.25);
+  }
+  
+  .input-group-text {
+    border-radius: 10px 0 0 10px;
+    border: 2px solid #e9ecef;
+    border-right: none;
+  }
+  
+  .input-group .form-control {
+    border-left: none;
+    border-radius: 0 10px 10px 0;
+  }
+</style>
+{% endblock %}

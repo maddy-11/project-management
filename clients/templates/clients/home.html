@@ -1,0 +1,16 @@
+{% extends 'clients/base.html' %}
+
+{% block title %}Dashboard - FineBooks{% endblock %}
+
+{% block content %}
+  <div class="alert alert-light d-flex align-items-center mb-4 shadow-sm rounded-3">
+    <div class="d-flex align-items-center">
+      <i class="fa fa-home fs-3 me-3"></i>
+      <div>
+        <h4 class="mb-0">Welcome, {{ user.first_name|default:user.username }}!</h4>
+        <small class="text-muted">Glad to see you on your dashboard.</small>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+

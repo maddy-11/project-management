@@ -1,0 +1,1302 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}FineBooks{% endblock %}</title>
+
+  <!-- Bootstrap & Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,500,600,700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+  :root {
+    --primary: #326597;
+    --primary-dark: #1e40af;
+    --primary-light: #dbeafe;
+    --secondary: #64748b;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --light: #f8fafc;
+    --dark: #1e293b;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --sidebar-width: 300px;
+    --sidebar-collapsed-width: 80px;
+    --header-height: 70px;
+    --border-radius: 12px;
+    --transition-speed: 0.3s;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--gray-100);
+    color: var(--gray-800);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Layout */
+  .app-container {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Header Styles */
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-height);
+    background-color: #ffffff;
+    box-shadow: var(--shadow-sm);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000;
+    transition: left var(--transition-speed);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .sidebar-toggle {
+    background: transparent;
+    border: none;
+    color: var(--gray-600);
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .sidebar-toggle:hover {
+    background-color: var(--gray-100);
+    color: var(--primary);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+  }
+
+  .logo-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    font-weight: 700;
+  }
+
+  .logo-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    transition: opacity 0.2s;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Notification & User Dropdown */
+  .header-action {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: var(--gray-600);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .header-action:hover {
+    background-color: var(--gray-100);
+    color: var(--primary);
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    transition: all 0.2s;
+  }
+
+  .user-dropdown:hover {
+    background-color: var(--gray-100);
+  }
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .user-name {
+    font-weight: 600;
+    color: var(--gray-800);
+    font-size: 0.95rem;
+  }
+
+  .user-role {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+  }
+
+  /* Sidebar Styles - Modern Glassmorphism Design */
+  .sidebar {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    height: calc(100vh - var(--header-height));
+    width: var(--sidebar-width);
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 50%, 
+      rgba(241, 245, 249, 0.85) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    z-index: 999;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /* Custom Scrollbar for Sidebar - Enhanced Design */
+  .sidebar::-webkit-scrollbar {
+    width: 2px;
+  }
+
+  .sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    margin: 10px 0;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: #002575;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0, 37, 117, 0.3);
+  }
+
+  .sidebar::-webkit-scrollbar-thumb:hover {
+    background: #001f5c;
+    box-shadow: 0 4px 16px rgba(0, 37, 117, 0.5);
+    transform: scale(1.1);
+  }
+
+  .sidebar::-webkit-scrollbar-thumb:active {
+    background: #001a4d;
+  }
+
+  /* Firefox scrollbar */
+  .sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: #002575 rgba(255, 255, 255, 0.1);
+  }
+
+  .sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+  }
+
+  .sidebar-content {
+    padding: 1.5rem 1rem;
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  /* Smooth scrolling for sidebar content */
+  .sidebar-content {
+    scroll-behavior: smooth;
+    scroll-padding-top: 1rem;
+  }
+
+  .sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--gray-200);
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(10px);
+    position: relative;
+  }
+
+  .sidebar-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--gray-200) 50%, transparent 100%);
+  }
+
+  .nav-section {
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .nav-section::after {
+    content: '';
+    position: absolute;
+    bottom: -0.75rem;
+    left: 1rem;
+    right: 1rem;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--gray-200) 50%, transparent 100%);
+  }
+
+  .nav-section:last-child::after {
+    display: none;
+  }
+
+  /* Updated section title layout: left group + arrow on the right */
+  .nav-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .nav-section-title::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .nav-section-title:hover {
+    color: var(--primary);
+    background: linear-gradient(135deg, 
+      rgba(37, 99, 235, 0.15) 0%, 
+      rgba(30, 64, 175, 0.1) 50%,
+      rgba(37, 99, 235, 0.05) 100%);
+    transform: translateX(4px) scale(1.02);
+    box-shadow: 
+      0 4px 16px rgba(37, 99, 235, 0.2),
+      0 0 0 1px rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+  }
+
+  .nav-section-title:hover::before {
+    left: 100%;
+  }
+
+  .nav-section-title .left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .nav-section-title .left i {
+    margin-right: 0;
+  }
+
+  .nav-section-title .left span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+  }
+
+  /* Arrow */
+  .nav-section-title .section-arrow {
+    margin-left: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.9rem;
+    color: var(--gray-500);
+    transform-origin: center;
+  }
+
+  /* rotate arrow when title has collapsed class */
+  .nav-section-title.collapsed .section-arrow {
+    transform: rotate(-90deg);
+    color: var(--primary);
+  }
+
+  .nav-section-title:hover .section-arrow {
+    color: var(--primary);
+    transform: scale(1.1);
+  }
+
+  .nav-section-title.collapsed:hover .section-arrow {
+    transform: rotate(-90deg) scale(1.1);
+  }
+
+  .nav-links {
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .nav-links.collapsed {
+    height: 0 !important;
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  .sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    margin: 0.5rem 0;
+    color: var(--gray-600);
+    text-decoration: none;
+    border-radius: 12px;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    font-weight: 500;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .sidebar .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), transparent);
+    transition: left 0.6s ease;
+  }
+
+  .sidebar .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 0 4px 4px 0;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar .nav-link:hover {
+    color: var(--primary);
+    /* background: linear-gradient(135deg, 
+      rgba(37, 99, 235, 0.2) 0%, 
+      rgba(30, 64, 175, 0.15) 50%,
+      rgba(37, 99, 235, 0.1) 100%); */
+    transform: translateX(8px) scale(1.02);
+    /* box-shadow: 
+      0 8px 25px rgba(37, 99, 235, 0.3),
+      0 0 0 1px rgba(37, 99, 235, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3); */
+    border: 1px solid rgba(37, 99, 235, 0.3);
+  }
+
+  .sidebar .nav-link:hover::before {
+    left: 100%;
+  }
+
+  .sidebar .nav-link:hover::after {
+    height: 60%;
+  }
+
+  .sidebar .nav-link.active {
+    color: #002575;
+    background: linear-gradient(135deg, 
+      rgba(37, 99, 235, 0.25) 0%, 
+      rgba(30, 64, 175, 0.2) 50%,
+      rgba(37, 99, 235, 0.15) 100%);
+    font-weight: 600;
+    /* box-shadow: 
+      0 8px 32px rgba(37, 99, 235, 0.4),
+      0 0 0 1px rgba(37, 99, 235, 0.3), */
+      /* inset 0 1px 0 rgba(255, 255, 255, 0.4); */
+    border: 1px solid rgba(37, 99, 235, 0.4);
+    transform: translateX(4px);
+  }
+
+  .sidebar .nav-link.active::after {
+    height: 70%;
+    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+  }
+
+  .sidebar .nav-link i {
+    margin-right: 0.75rem;
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  .sidebar .nav-link:hover i {
+    transform: scale(1.2) rotate(5deg);
+    color: var(--primary);
+    filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.3));
+  }
+
+  .sidebar .nav-link.active i {
+    color: #002575;
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.4));
+  }
+
+  .sidebar .nav-link .badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 1;
+  }
+
+  .sidebar .nav-link:hover .badge {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(204, 12, 12, 0.15);
+  }
+
+  /* Collapsed sidebar styles */
+  .sidebar.collapsed .nav-section-title .left span,
+  .sidebar.collapsed .nav-link span {
+    display: none;
+  }
+
+  .sidebar.collapsed .nav-section-title {
+    justify-content: center;
+    padding: 0.75rem;
+    position: relative;
+  }
+
+  .sidebar.collapsed .nav-section-title i {
+    margin-right: 0;
+    font-size: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar.collapsed .nav-section-title:hover i {
+    transform: scale(1.2);
+    color: var(--primary);
+  }
+
+  .sidebar.collapsed .nav-link {
+    padding: 0.75rem;
+    justify-content: center;
+    position: relative;
+  }
+
+  .sidebar.collapsed .nav-link i {
+    margin-right: 0;
+    font-size: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar.collapsed .nav-link:hover i {
+    transform: scale(1.2);
+  }
+
+  .sidebar.collapsed .nav-link .badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+    min-width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* hide arrow when sidebar collapsed to keep layout clean */
+  .sidebar.collapsed .nav-section-title .section-arrow {
+    display: none;
+  }
+
+  /* Tooltip for collapsed sidebar */
+  .sidebar.collapsed .nav-link {
+    position: relative;
+  }
+
+  .sidebar.collapsed .nav-link::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--dark);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    margin-left: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar.collapsed .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--dark);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    margin-left: -0.25rem;
+  }
+
+  .sidebar.collapsed .nav-link:hover::before,
+  .sidebar.collapsed .nav-link:hover::after {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Main Content */
+  .main-content {
+    flex: 1;
+    margin-top: var(--header-height);
+    margin-left: var(--sidebar-width);
+    padding: 2rem;
+    min-height: calc(100vh - var(--header-height));
+    transition: margin-left var(--transition-speed);
+  }
+
+  .main-content.full-width {
+    margin-left: 0;
+  }
+
+  .main-content.collapsed-sidebar {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+
+  /* Footer */
+  .footer {
+    background-color: #ffffff;
+    border-top: 1px solid var(--gray-200);
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--transition-speed);
+  }
+
+  .footer.collapsed-sidebar {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+
+  .footer.full-width {
+    margin-left: 0;
+  }
+
+  /* Dropdown menus */
+  .dropdown-menu {
+    border: none;
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--border-radius);
+    padding: 0.5rem;
+  }
+
+  .dropdown-item {
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+  }
+
+  .dropdown-item i {
+    margin-right: 0.75rem;
+    width: 18px;
+  }
+
+  .dropdown-item:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+  }
+
+  .dropdown-divider {
+    border-color: var(--gray-200);
+  }
+
+  .dropdown-header {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Notification dropdown */
+  .notification-item {
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    transition: all 0.2s;
+  }
+
+  .notification-item.unread {
+    background-color: var(--primary-light);
+  }
+
+  .notification-item:hover {
+    background-color: var(--gray-100);
+  }
+
+  .notification-content {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .notification-time {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 992px) {
+    .sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar.mobile-open {
+      transform: translateX(0);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .main-content, .footer {
+      margin-left: 0 !important;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 100%);
+      z-index: 998;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay.active {
+      display: block;
+      opacity: 1;
+    }
+
+    .user-info {
+      display: none;
+    }
+
+    /* Mobile-specific sidebar enhancements */
+    .sidebar.mobile-open .nav-link {
+      transform: translateX(0);
+    }
+
+    .sidebar.mobile-open .nav-link:hover {
+      transform: translateX(2px);
+    }
+  }
+
+  @media (max-width: 576px) {
+    .header {
+      padding: 0 1rem;
+    }
+
+    .main-content {
+      padding: 1.5rem;
+    }
+  }
+  </style>
+</head>
+
+<body>
+  <!-- Overlay for mobile -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+      <a href="/" class="logo">
+        <div class="logo-icon">FB</div>
+        <span class="logo-text">FineBooks</span>
+      </a>
+    </div>
+
+    <div class="header-right">
+      <!-- Notifications -->
+      <div class="dropdown">
+        <button class="header-action" id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fas fa-bell"></i>
+          {% if notification_count > 0 %}
+          <span class="notification-badge">{{ notification_count }}</span>
+          {% endif %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="max-height:500px;width:300px;overflow-y:auto">
+          <li class="dropdown-header">Notifications</li>
+          {% for n in user_notifications %}
+          <li>
+            <div class="notification-item {% if not n.is_read %}unread{% endif %}">
+              <div class="notification-content">{{ n.message }}</div>
+              <div class="notification-time">{{ n.created_at|date:"M d, Y H:i" }}</div>
+            </div>
+          </li>
+          {% empty %}
+          <li class="dropdown-item text-center text-muted py-3">No notifications</li>
+          {% endfor %}
+          {% if user_notifications %}
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <button type="button" id="markAllReadBtn" class="dropdown-item text-center text-primary">
+              <i class="fas fa-check-circle me-2"></i>Mark all as read
+            </button>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- User dropdown -->
+      <div class="dropdown">
+        <div class="user-dropdown" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar">
+            {{ user.get_full_name|default:user.username|first|upper }}
+          </div>
+          <div class="user-info">
+            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="user-role">{{ user.role.name|default:"No Role" }}</div>
+          </div>
+          <i class="fas fa-chevron-down"></i>
+        </div>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <li class="dropdown-header">Account</li>
+          <li><a class="dropdown-item" href="{% url 'user-profile' %}"><i class="fas fa-user-circle"></i>Profile</a></li>
+          <li><a class="dropdown-item" href="{% url 'change-password' %}"><i class="fas fa-key"></i>Change Password</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <form action="{% url 'logout' %}" method="post" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item text-danger">
+                <i class="fas fa-sign-out-alt"></i>Logout
+              </button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-content">
+      <!-- Dashboard -->
+      {% if 'dashboard' in user_page_access %}
+      <div class="nav-section" style="border: none;">
+        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/" data-tooltip="Dashboard">
+          <i class="fas fa-home"></i>
+          <span>Dashboard</span>
+        </a>
+      </div>
+      {% endif %}
+
+      <!-- Company Info Section -->
+      {% if 'company-profile' in user_page_access or 'department-list' in user_page_access or 'documents' in user_page_access or 'role-list' in user_page_access or 'bank-account-list' in user_page_access %}
+      <div class="nav-section">
+        <div class="nav-section-title" data-section="companyInfo">
+          <div class="left">
+            <i class="fas fa-building"></i>
+            <span>Company Info</span>
+          </div>
+          <i class="fas fa-chevron-down section-arrow" aria-hidden="true"></i>
+        </div>
+        <div class="nav-links" id="companyInfoLinks">
+          {% if 'company-profile' in user_page_access %}
+          <a class="nav-link {% if 'profile' in request.path %}active{% endif %}" href="{% url 'company-profile' %}" data-tooltip="Company Profile">
+            <i class="fas fa-user-circle"></i>
+            <span>Profile</span>
+          </a>
+          {% endif %}
+          {% if 'department-list' in user_page_access %}
+          <a class="nav-link {% if 'departments' in request.path %}active{% endif %}" href="{% url 'department-list' %}" data-tooltip="Departments">
+            <i class="fas fa-sitemap"></i>
+            <span>Departments</span>
+          </a>
+          {% endif %}
+          {% if 'bank-account-list' in user_page_access %}
+          <a class="nav-link {% if 'bank-accounts' in request.path %}active{% endif %}" href="{% url 'bank-account-list' %}">
+            <i class="fas fa-university"></i>
+            <span>Bank Accounts</span>
+          </a>
+          {% endif %}
+          {% if 'documents' in user_page_access %}
+          <a class="nav-link {% if 'documents' in request.path %}active{% endif %}" href="{% url 'documents-home' %}">
+            <i class="fas fa-file"></i>
+            <span>Documents</span>
+          </a>
+          {% endif %}
+          {% if 'role-list' in user_page_access %}
+          <a class="nav-link {% if 'roles' in request.path %}active{% endif %}" href="{% url 'role-list' %}">
+            <i class="fas fa-user-shield"></i>
+            <span>Roles</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Client Management Section -->
+      {% if 'partners' in user_page_access or 'projects' in user_page_access %}
+      <div class="nav-section">
+        <div class="nav-section-title" data-section="clientManagement">
+          <div class="left">
+            <i class="fas fa-handshake"></i>
+            <span>Management</span>
+          </div>
+          <i class="fas fa-chevron-down section-arrow" aria-hidden="true"></i>
+        </div>
+        <div class="nav-links" id="clientManagementLinks">
+          {% if 'projects' in user_page_access %}
+          <a class="nav-link {% if 'projects' in request.path and 'invoices' not in request.path %}active{% endif %}" href="{% url 'project-list' %}" data-tooltip="Projects">
+            <i class="fas fa-tasks"></i>
+            <span>Projects</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+
+      <!-- Other Section -->
+      {% if user.is_staff %}
+      <div class="nav-section">
+        <div class="nav-section-title" data-section="other">
+          <div class="left">
+            <i class="fas fa-cog"></i>
+            <span>Other</span>
+          </div>
+          <i class="fas fa-chevron-down section-arrow" aria-hidden="true"></i>
+        </div>
+        <div class="nav-links" id="otherLinks">
+          <a class="nav-link" href="/admin/">
+            <i class="fas fa-cogs"></i>
+            <span>Admin</span>
+          </a>
+
+          {% if 'user-list' in user_page_access %}
+          <a class="nav-link {% if 'users' in request.path %}active{% endif %}" href="{% url 'user-list' %}">
+            <i class="fas fa-users"></i>
+            <span>Users</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="sidebar-footer">
+      &copy; {{ year|default:2025 }} FineBooks
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer" id="footer">
+    &copy; {{ year|default:2025 }} FineBooks. All rights reserved.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  {% block js %}{% endblock %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const footer = document.getElementById('footer');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const overlay = document.getElementById('overlay');
+    const isMobile = window.matchMedia('(max-width: 992px)').matches;
+
+      // Initialize sidebar state
+    let sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+      // Function to toggle sidebar
+    function toggleSidebar(collapse) {
+      if (isMobile) {
+        sidebar.classList.toggle('mobile-open');
+        overlay.classList.toggle('active');
+      } else {
+        if (typeof collapse === 'boolean') {
+          sidebarCollapsed = collapse;
+        } else {
+          sidebarCollapsed = !sidebarCollapsed;
+        }
+
+        if (sidebarCollapsed) {
+          sidebar.classList.add('collapsed');
+          mainContent.classList.add('collapsed-sidebar');
+          footer.classList.add('collapsed-sidebar');
+        } else {
+          sidebar.classList.remove('collapsed');
+          mainContent.classList.remove('collapsed-sidebar');
+          footer.classList.remove('collapsed-sidebar');
+        }
+
+        localStorage.setItem('sidebarCollapsed', sidebarCollapsed);
+      }
+    }
+
+      // Apply initial state
+    if (!isMobile && sidebarCollapsed) {
+      toggleSidebar(true);
+    }
+
+      // Set up toggle button
+    sidebarToggle.addEventListener('click', function() {
+      toggleSidebar();
+    });
+
+      // Close sidebar when clicking overlay on mobile
+    overlay.addEventListener('click', function() {
+      toggleSidebar();
+    });
+
+      // Section toggles
+    const sectionTitles = document.querySelectorAll('.nav-section-title');
+
+      // Helper to save section states (true => expanded/open, false => collapsed/closed)
+    function saveSectionState(sectionId, isOpen) {
+        if (isMobile) return; // don't persist mobile interactions
+      const state = JSON.parse(localStorage.getItem('sidebarSections') || '{}');
+      state[sectionId] = !!isOpen;
+      localStorage.setItem('sidebarSections', JSON.stringify(state));
+    }
+
+    function expandSection(titleEl, linksContainer) {
+      linksContainer.classList.remove('collapsed');
+      titleEl.classList.remove('collapsed');
+      linksContainer.style.height = linksContainer.scrollHeight + 'px';
+      setTimeout(() => {
+        linksContainer.style.height = '';
+      }, 300);
+    }
+
+    function collapseSection(titleEl, linksContainer) {
+        // set explicit height to allow transition
+      linksContainer.style.height = linksContainer.scrollHeight + 'px';
+        // trigger reflow
+      linksContainer.offsetHeight;
+      linksContainer.style.height = '0';
+      linksContainer.classList.add('collapsed');
+      titleEl.classList.add('collapsed');
+    }
+
+      // Initialize: collapse all sections, then apply saved states (and leave others collapsed)
+    function collapseAllSections() {
+      document.querySelectorAll('.nav-links').forEach(links => {
+        links.classList.add('collapsed');
+        links.style.height = '0';
+      });
+      document.querySelectorAll('.nav-section-title').forEach(title => {
+        title.classList.add('collapsed');
+      });
+    }
+
+      // Apply saved states (if any)
+    function applySavedSectionStates() {
+      if (isMobile) return;
+      const sectionStates = JSON.parse(localStorage.getItem('sidebarSections') || '{}');
+      sectionTitles.forEach(title => {
+        const sectionId = title.getAttribute('data-section');
+        const linksContainer = document.getElementById(sectionId + 'Links');
+        if (!linksContainer) return;
+          // If saved state says open (true) -> expand
+        if (sectionStates[sectionId] === true) {
+          expandSection(title, linksContainer);
+        } else {
+            // otherwise keep collapsed
+          linksContainer.classList.add('collapsed');
+          title.classList.add('collapsed');
+          linksContainer.style.height = '0';
+        }
+      });
+    }
+
+      // Attach click handlers
+    sectionTitles.forEach(title => {
+      title.addEventListener('click', function() {
+        const sectionId = this.getAttribute('data-section');
+        const linksContainer = document.getElementById(sectionId + 'Links');
+
+        if (!linksContainer) return;
+
+        const isCollapsed = linksContainer.classList.contains('collapsed');
+
+        if (isCollapsed) {
+          expandSection(this, linksContainer);
+          saveSectionState(sectionId, true);
+        } else {
+          collapseSection(this, linksContainer);
+          saveSectionState(sectionId, false);
+        }
+      });
+    });
+
+      // Initialize section states
+    if (!isMobile) {
+      collapseAllSections();
+      applySavedSectionStates();
+    }
+
+      // Auto-expand section containing active link (if any)
+    function expandActiveSection() {
+      const activeLink = document.querySelector('.nav-link.active');
+      if (activeLink) {
+        const parentSection = activeLink.closest('.nav-links');
+        if (parentSection) {
+          const sectionId = parentSection.id.replace('Links', '');
+          const sectionTitle = document.querySelector(`[data-section="${sectionId}"]`);
+          if (sectionTitle) {
+            expandSection(sectionTitle, parentSection);
+              // persist the opened state
+            saveSectionState(sectionId, true);
+              // scroll active into view
+            setTimeout(() => {
+              activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 350); // after expand animation
+            }
+          }
+        }
+      }
+
+      // Run after a short delay to ensure DOM is fully ready
+      setTimeout(expandActiveSection, 100);
+
+      // AJAX for Mark all as read
+      const markAllReadBtn = document.getElementById('markAllReadBtn');
+      if (markAllReadBtn) {
+        markAllReadBtn.addEventListener('click', function() {
+          markAllNotificationsAsRead();
+        });
+      }
+
+      // Function to mark all notifications as read
+      function markAllNotificationsAsRead() {
+        fetch('{% url "notifications-mark-all-read" %}', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Remove badge
+            const badge = document.querySelector('.notification-badge');
+            if (badge) badge.remove();
+
+            // Remove unread styles
+            document.querySelectorAll('.notification-item.unread').forEach(item => {
+              item.classList.remove('unread');
+            });
+          }
+        });
+      }
+
+      // Auto-mark as read when notifications dropdown is opened
+      const notificationsDropdown = document.getElementById('notificationsDropdown');
+      if (notificationsDropdown) {
+        notificationsDropdown.addEventListener('click', function() {
+          // Small delay to ensure dropdown is opened first
+          setTimeout(() => {
+            if (document.querySelectorAll('.notification-item.unread').length > 0) {
+              markAllNotificationsAsRead();
+            }
+          }, 100);
+        });
+      }
+
+      // Handle window resize
+      function handleResize() {
+        const nowMobile = window.matchMedia('(max-width: 992px)').matches;
+
+        if (nowMobile !== isMobile) {
+          // Device type changed, reload for simplicity
+          window.location.reload();
+        }
+      }
+
+      window.addEventListener('resize', handleResize);
+    });
+
+    // Extra safety expansion for any leftover logic that previously existed in your file:
+    // This keeps the active link visible and ensures only its parent section is open on load.
+function expandActiveSections() {
+  const activeLink = document.querySelector('.nav-link.active');
+  if (activeLink) {
+    let parentSection = activeLink.closest('.nav-links');
+    if (parentSection) {
+      const sectionId = parentSection.id.replace('Links', '');
+      const sectionTitle = document.querySelector(`[data-section="${sectionId}"]`);
+      if (sectionTitle && parentSection.classList.contains('collapsed')) {
+            // open it
+        parentSection.classList.remove('collapsed');
+        sectionTitle.classList.remove('collapsed');
+        parentSection.style.height = parentSection.scrollHeight + 'px';
+        setTimeout(() => {
+          parentSection.style.height = '';
+        }, 300);
+            // remember state
+        if (!window.matchMedia('(max-width: 992px)').matches) {
+          const state = JSON.parse(localStorage.getItem('sidebarSections') || '{}');
+          state[sectionId] = true;
+          localStorage.setItem('sidebarSections', JSON.stringify(state));
+        }
+      }
+          // scroll into view
+      setTimeout(() => {
+        activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 350);
+    }
+  }
+}
+function collapseAllSections() {
+  document.querySelectorAll('.nav-links').forEach(links => {
+    links.classList.add('collapsed');
+    links.style.height = '0';
+  });
+  document.querySelectorAll('.nav-section-title').forEach(title => {
+    title.classList.add('collapsed');
+  });
+}
+
+    // run it once more
+document.addEventListener('DOMContentLoaded', function () {
+  collapseAllSections();   // close everything
+  // setTimeout(expandActiveSection(), 100);
+});
+</script>
+</body>
+</html>

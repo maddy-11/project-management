@@ -1,0 +1,682 @@
+<div class="task-panel mb-3">
+  <div class="d-flex justify-content-around align-items-center mb-3">
+    <h4 class="fw-bold mb-0">{{ task.title }}</h4>
+    <a href="/tasks/{{ task.id }}/edit/" class="btn btn-outline-primary btn-sm ms-2" title="Edit Task">
+      <i class="fa fa-pen"></i> Edit
+    </a>
+  </div>
+  <div class="mb-2">
+    <span class="badge bg-primary me-2">Status: {{ task.status.name }}</span>
+    <span class="badge 
+      {% if task.priority == 'High' %}bg-danger
+      {% elif task.priority == 'Medium' %}bg-warning text-dark
+      {% else %}bg-info text-dark{% endif %}">
+      Priority: {{ task.priority }}
+    </span>
+    {% if task.due_date %}
+      <span class="badge bg-light text-dark me-2">Due: {{ task.due_date|date:'M d, Y' }}</span>
+    {% endif %}
+  </div>
+  <div class="mb-3">
+    <strong>Assigned to:</strong>
+    <span class="d-inline-flex flex-wrap gap-1 align-items-center">
+      {% for u in task.assignees.all %}
+        <span class="badge bg-primary bg-opacity-10 text-primary border">{{ u.get_full_name|default:u.username }}</span>
+      {% empty %}
+        <span class="text-muted">Unassigned</span>
+      {% endfor %}
+    </span><br>
+    <strong>Created by:</strong> {{ task.created_by }}<br>
+    <strong>Created at:</strong> {{ task.created_at|date:'M d, Y H:i' }}
+  </div>
+  <div class="mb-3">
+    <strong>Description:</strong>
+    <div class="border rounded p-2 bg-light">{{ task.description|default:"No Description"|linebreaks }}</div>
+  </div>
+  {% if task.attachments.exists %}
+  <div class="mb-3">
+    <strong>
+      <i class="fa-solid fa-paperclip me-2 text-muted"></i>Attachments
+    </strong>
+    <div class="attachments-container mt-2">
+      {% for att in task.attachments.all %}
+        {% with fname=att.file.name|lower %}
+          {% with clean_name=att.file.name|cut:'task_attachments/' %}
+            <div class="attachment-item d-flex align-items-center p-3 bg-light rounded-3 border mb-2">
+              <div class="attachment-icon me-3">
+                {% if fname|slice:"-4:" == ".jpg" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-4:" == ".png" %}
+                  <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                    <i class="fa-solid fa-image text-success"></i>
+                  </div>
+                {% elif fname|slice:"-4:" == ".pdf" %}
+                  <div class="bg-danger bg-opacity-10 rounded-circle p-2">
+                    <i class="fa-solid fa-file-pdf text-danger"></i>
+                  </div>
+                {% elif fname|slice:"-4:" == ".doc" or fname|slice:"-5:" == ".docx" %}
+                  <div class="bg-primary bg-opacity-10 rounded-circle p-2">
+                    <i class="fa-solid fa-file-word text-primary"></i>
+                  </div>
+                {% elif fname|slice:"-4:" == ".xls" or fname|slice:"-5:" == ".xlsx" %}
+                  <div class="bg-success bg-opacity-10 rounded-circle p-2">
+                    <i class="fa-solid fa-file-excel text-success"></i>
+                  </div>
+                {% else %}
+                  <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                    <i class="fa-solid fa-file text-secondary"></i>
+                  </div>
+                {% endif %}
+              </div>
+              
+              <div class="attachment-info flex-grow-1 me-3">
+                <div class="d-flex align-items-center">
+                  <h6 class="mb-0 fw-semibold text-truncate me-2" style="max-width: 200px;" title="{{ clean_name }}">
+                    {{ clean_name }}
+                  </h6>
+                  <small class="text-muted">
+                    <i class="fa-solid fa-calendar me-1"></i>
+                    {{ att.uploaded_at|date:"M d, Y" }}
+                  </small>
+                </div>
+                {% if fname|slice:"-4:" == ".jpg" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-4:" == ".png" %}
+                <div class="mt-2">
+                  <img src="{{ att.file.url }}" alt="Preview" class="img-thumbnail" style="max-height: 60px; max-width: 80px; object-fit: cover;">
+                </div>
+                {% endif %}
+              </div>
+              
+              <div class="attachment-actions d-flex gap-2">
+                <a href="{{ att.file.url }}" target="_blank" class="btn btn-outline-primary btn-sm" title="View">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+                <a href="{{ att.file.url }}" download class="btn btn-outline-success btn-sm" title="Download">
+                  <i class="fa-solid fa-download"></i>
+                </a>
+              </div>
+            </div>
+          {% endwith %}
+        {% endwith %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Comments Section -->
+<div class="comments-section">
+  <h5 class="fw-bold mb-3">
+    <i class="fa fa-comments me-2 text-primary"></i>
+    Comments 
+    <span class="badge bg-secondary ms-2" id="comment-count">{{ comments.count }}</span>
+  </h5>
+  
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <form id="addCommentForm" method="post" action="{% url 'add-task-comment' task.id %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="{{ comment_form.content.id_for_label }}" class="form-label fw-semibold">Add a comment</label>
+          <div class="position-relative">
+            <div id="textareaHighlight" class="textarea-highlight"></div>
+            {{ comment_form.content }}
+            <div id="mentionDropdown" class="dropdown-menu" style="display: none; max-height: 200px; overflow-y: auto;">
+            </div>
+          </div>
+          {% if comment_form.content.errors %}
+            <div class="text-danger small mt-1">
+              {{ comment_form.content.errors|striptags }}
+            </div>
+          {% endif %}
+        </div>
+        
+        <div class="mb-3">
+          <div class="d-flex align-items-center">
+            <label for="{{ comment_form.attachment.id_for_label }}" class="form-label fw-semibold mb-0 me-2">
+              <i class="fa fa-paperclip me-1"></i>Attach:
+            </label>
+            <div class="flex-grow-1">
+              {{ comment_form.attachment }}
+            </div>
+            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" onclick="clearFileInput()" title="Clear file">
+              <i class="fa fa-times"></i>
+            </button>
+          </div>
+          {% if comment_form.attachment.errors %}
+            <div class="text-danger small mt-1">
+              {{ comment_form.attachment.errors|striptags }}
+            </div>
+          {% endif %}
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center">
+          <small class="text-muted">
+            <i class="fa fa-at me-1"></i>Type @ to mention project members
+          </small>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa fa-paper-plane me-1"></i> Post Comment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="commentsList">
+    {% if comments %}
+      {% for comment in comments %}
+        <div class="comment-item border-bottom">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div class="d-flex align-items-center">
+              <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                <small class="fw-bold">{{ comment.author.first_name|first|default:comment.author.username|first }}</small>
+              </div>
+              <div>
+                <strong class="d-block">{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+                <small class="text-muted">{{ comment.created_at|date:'M d, Y H:i' }}</small>
+              </div>
+            </div>
+          </div>
+          <div class="comment-content ps-4">
+            <span class="processed-content">{{ comment.content|linebreaks }}</span>
+            {% if comment.attachment %}
+              <div class="mt-2">
+                <small class="text-muted">📎 Attached:</small>
+                {% with fname=comment.attachment.file.name|lower %}
+                  {% with clean_name=comment.attachment.file.name|cut:'task_attachments/' %}
+                    {% if fname|slice:"-4:" == ".jpg" or fname|slice:"-5:" == ".jpeg" or fname|slice:"-4:" == ".png" %}
+                      <a href="{{ comment.attachment.file.url }}" target="_blank" class="d-block mt-1" title="{{ clean_name }}">
+                        <img src="{{ comment.attachment.file.url }}" alt="Image" class="img-thumbnail" style="max-width:80px; max-height:80px; object-fit:cover;">
+                      </a>
+                    {% elif fname|slice:"-4:" == ".pdf" %}
+                      <a href="{{ comment.attachment.file.url }}" target="_blank" class="d-flex align-items-center mt-1 text-decoration-none">
+                        <i class="fa fa-file-pdf text-danger me-2"></i>
+                        <span title="{{ clean_name }}">{{ clean_name }}</span>
+                      </a>
+                    {% elif fname|slice:"-4:" == ".doc" or fname|slice:"-5:" == ".docx" %}
+                      <a href="{{ comment.attachment.file.url }}" target="_blank" class="d-flex align-items-center mt-1 text-decoration-none">
+                        <i class="fa fa-file-word text-primary me-2"></i>
+                        <span title="{{ clean_name }}">{{ clean_name }}</span>
+                      </a>
+                    {% elif fname|slice:"-4:" == ".xls" or fname|slice:"-5:" == ".xlsx" %}
+                      <a href="{{ comment.attachment.file.url }}" target="_blank" class="d-flex align-items-center mt-1 text-decoration-none">
+                        <i class="fa fa-file-excel text-success me-2"></i>
+                        <span title="{{ clean_name }}">{{ clean_name }}</span>
+                      </a>
+                    {% else %}
+                      <a href="{{ comment.attachment.file.url }}" target="_blank" class="d-flex align-items-center mt-1 text-decoration-none">
+                        <i class="fa fa-file text-secondary me-2"></i>
+                        <span title="{{ clean_name }}">{{ clean_name }}</span>
+                      </a>
+                    {% endif %}
+                  {% endwith %}
+                {% endwith %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center text-muted py-4">
+        <i class="fa fa-comments fa-2x mb-2"></i>
+        <p class="mb-0">No comments yet. Be the first to comment!</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.task-panel { min-width: 350px; }
+.img-thumbnail { border-radius: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.07); }
+.comment-item:last-child { border-bottom: none !important; }
+
+#mentionDropdown {
+  min-width: 250px;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+}
+
+.mention-item {
+  cursor: pointer;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.mention-item:hover {
+  background-color: #f8f9fa;
+}
+
+.mention-item.active {
+  background-color: #e3f2fd !important;
+  border-left: 3px solid #1976d2;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.mention-item:last-child {
+  border-bottom: none;
+}
+
+#id_attachment {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+}
+
+.mb-3 .d-flex {
+  align-items: center;
+}
+
+.mb-3 .form-label {
+  white-space: nowrap;
+  min-width: auto;
+}
+
+.comment-content {
+  word-wrap: break-word;
+}
+
+.comment-content .mention {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.comment-content .mention.self-mention {
+  background-color: #fff3e0;
+  color: #f57c00;
+  font-weight: 600;
+}
+
+.textarea-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #000;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#id_content {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  color: transparent;
+  caret-color: #000;
+}
+
+.textarea-highlight .mention {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  padding: 0
+}
+
+.textarea-highlight .mention.self-mention {
+  background-color: #fff3e0;
+  color: #f57c00;
+  font-weight: 600;
+  padding: 0
+}
+
+/* Attachment item styles */
+.attachment-item {
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef !important;
+}
+
+.attachment-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: #dee2e6 !important;
+}
+
+.attachment-actions .btn {
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.attachment-actions .btn:hover {
+  transform: scale(1.1);
+}
+
+.attachment-icon {
+  min-width: 48px;
+  text-align: center;
+}
+
+.attachment-info h6 {
+  font-size: 0.9rem;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+  const projectMembers = [
+    {% for member in task.project.members.all %}
+      {
+        id: {{ member.id }},
+        name: "{{ member.get_full_name|default:member.username }}",
+        username: "{{ member.username }}",
+        first_name: "{{ member.first_name }}",
+        last_name: "{{ member.last_name }}"
+      }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+  
+  
+  const currentUser = {
+    id: {{ user.id }},
+    username: "{{ user.username }}",
+    fullName: "{{ user.get_full_name|default:user.username }}"
+  };
+  
+  let mentionStartPos = -1;
+  let currentMentionQuery = '';
+  let isNavigatingWithKeyboard = false;
+  
+  function processMentions(text) {
+    if (!text) return text;
+    
+    const memberMap = {};
+    projectMembers.forEach(member => {
+      memberMap[member.name.toLowerCase()] = member;
+      memberMap[member.username.toLowerCase()] = member;
+    });
+    
+    const sortedNames = Object.keys(memberMap).sort((a, b) => b.length - a.length);
+    
+    let processedText = text;
+    
+    sortedNames.forEach(name => {
+      const member = memberMap[name];
+      const mentionPattern = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'gi');
+      
+      processedText = processedText.replace(mentionPattern, function(match) {
+        const isSelfMention = member.id === currentUser.id;
+        const mentionClass = isSelfMention ? 'mention self-mention' : 'mention';
+        return `<span class="${mentionClass}" title="@${member.username}">${match}</span>`;
+      });
+    });
+    
+    return processedText;
+  }
+  
+  function updateTextareaHighlight() {
+    const textarea = document.getElementById('id_content');
+    const highlightDiv = document.getElementById('textareaHighlight');
+    
+    if (!textarea || !highlightDiv) return;
+    
+    const text = textarea.value;
+    const highlightedText = processMentions(text);
+    
+    highlightDiv.innerHTML = highlightedText;
+    
+    highlightDiv.scrollTop = textarea.scrollTop;
+    highlightDiv.scrollLeft = textarea.scrollLeft;
+  }
+  
+  $('.processed-content').each(function() {
+    const $this = $(this);
+    const originalText = $this.text();
+    const processedHtml = processMentions(originalText);
+    $this.html(processedHtml);
+  });
+  
+  $('#addCommentForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const $form = $(this);
+    const $submitBtn = $form.find('button[type="submit"]');
+    const originalText = $submitBtn.html();
+    
+    $submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Posting...');
+    
+    const formData = new FormData(this);
+    
+    $.ajax({
+      url: $form.attr('action'),
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(response) {
+        if (response.success) {
+          $('#commentsList').append(response.comment_html);
+          
+          $('#commentsList .processed-content').last().each(function() {
+            const $this = $(this);
+            const originalText = $this.text();
+            const processedHtml = processMentions(originalText);
+            $this.html(processedHtml);
+          });
+          
+          $('#comment-count').text(response.comment_count);
+          
+          $form[0].reset();
+          
+          updateTextareaHighlight();
+          
+          $('#commentsList .text-center.text-muted').remove();
+          
+          showToast('Comment added successfully!', 'success');
+        }
+      },
+      error: function(xhr) {
+        if (xhr.responseJSON && xhr.responseJSON.errors) {
+          const errors = xhr.responseJSON.errors;
+          if (errors.content) {
+            showToast('Error: ' + errors.content[0], 'error');
+          }
+          if (errors.attachment) {
+            showToast('Error: ' + errors.attachment[0], 'error');
+          }
+        } else {
+          showToast('Failed to add comment. Please try again.', 'error');
+        }
+      },
+      complete: function() {
+        $submitBtn.prop('disabled', false).html(originalText);
+      }
+    });
+  });
+  
+  $('#id_content').on('input scroll', function() {
+    updateTextareaHighlight();
+  });
+  
+  $('#id_content').on('input keyup keydown', function(e) {
+    const textarea = this;
+    const cursorPos = textarea.selectionStart;
+    const text = textarea.value;
+    const $dropdown = $('#mentionDropdown');
+    
+    if ($dropdown.is(':visible') && (e.type === 'keydown')) {
+      const $items = $dropdown.find('.mention-item');
+      const $active = $dropdown.find('.mention-item.active');
+      
+      
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        isNavigatingWithKeyboard = true;
+        if ($active.length === 0) {
+          $items.first().addClass('active');
+        } else {
+          $active.removeClass('active').next().addClass('active');
+        }
+        // Reset flag after a short delay
+        setTimeout(() => { isNavigatingWithKeyboard = false; }, 100);
+        return; // Don't process input logic
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        isNavigatingWithKeyboard = true;
+        if ($active.length === 0) {
+          $items.last().addClass('active');
+        } else {
+          $active.removeClass('active').prev().addClass('active');
+        }
+        // Reset flag after a short delay
+        setTimeout(() => { isNavigatingWithKeyboard = false; }, 100);
+        return; // Don't process input logic
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if ($active.length > 0) {
+          $active.trigger('click');
+          setTimeout(() => updateTextareaHighlight(), 10);
+        }
+        return; // Don't process input logic
+      } else if (e.key === 'Escape') {
+        hideMentionDropdown();
+        return; // Don't process input logic
+      }
+    }
+    
+    if ((e.type === 'input' || e.type === 'keyup') && !isNavigatingWithKeyboard) {
+      const mentionMatch = text.substring(0, cursorPos).match(/@([a-zA-Z0-9\s]*)$/);
+      
+      if (mentionMatch) {
+        mentionStartPos = cursorPos - mentionMatch[0].length;
+        currentMentionQuery = mentionMatch[1].toLowerCase().trim();
+        
+        
+        const filteredMembers = projectMembers.filter(member => 
+          member.name.toLowerCase().includes(currentMentionQuery) ||
+          member.username.toLowerCase().includes(currentMentionQuery) ||
+          (member.first_name && member.first_name.toLowerCase().includes(currentMentionQuery)) ||
+          (member.last_name && member.last_name.toLowerCase().includes(currentMentionQuery))
+        );
+        
+        
+        if (filteredMembers.length > 0) {
+          showMentionDropdown(filteredMembers, textarea);
+        } else {
+          hideMentionDropdown();
+        }
+      } else {
+        hideMentionDropdown();
+      }
+    }
+  });
+  
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('#mentionDropdown, #id_content').length) {
+      hideMentionDropdown();
+    }
+  });
+  
+  function showMentionDropdown(members, textarea) {
+    const $dropdown = $('#mentionDropdown');
+    let html = '';
+    
+    const $currentActive = $dropdown.find('.mention-item.active');
+    const currentActiveName = $currentActive.data('member-name');
+    
+    
+    members.forEach((member, index) => {
+      const isActive = member.name === currentActiveName;
+      const activeClass = isActive ? ' active' : '';
+      
+      html += `
+        <div class="mention-item dropdown-item${activeClass}" data-member-id="${member.id}" data-member-name="${member.name}">
+          <div class="d-flex align-items-center">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+              <small class="fw-bold">${member.first_name ? member.first_name[0] : member.username[0]}</small>
+            </div>
+            <div>
+              <div class="fw-semibold">${member.name}</div>
+              <small class="text-muted">@${member.username}</small>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    $dropdown.html(html);
+    $dropdown.show();
+    
+    
+    $dropdown.on('click', function(e) {
+      e.stopPropagation();
+    });
+    
+    const $textareaContainer = $(textarea).closest('.position-relative');
+    const containerRect = $textareaContainer[0].getBoundingClientRect();
+    
+    $dropdown.css({
+      position: 'absolute',
+      top: '100%',
+      left: '0',
+      right: '0',
+      zIndex: 1050,
+      marginTop: '2px'
+    });
+    
+    $dropdown.off('click.mention').on('click.mention', '.mention-item', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const memberName = $(this).data('member-name');
+      const text = textarea.value;
+      const beforeMention = text.substring(0, mentionStartPos);
+      const afterMention = text.substring(textarea.selectionStart);
+      
+      const mentionText = '@' + memberName + ' ';
+      const newText = beforeMention + mentionText + afterMention;
+      textarea.value = newText;
+      textarea.focus();
+      
+      const newCursorPos = beforeMention.length + mentionText.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      
+      updateTextareaHighlight();
+      
+      hideMentionDropdown();
+    });
+  }
+  
+  function hideMentionDropdown() {
+    $('#mentionDropdown').hide().empty();
+    mentionStartPos = -1;
+    currentMentionQuery = '';
+  }
+  
+  window.clearFileInput = function() {
+    $('#id_attachment').val('');
+  };
+  
+  function showToast(message, type) {
+    const toastClass = type === 'success' ? 'bg-success' : 'bg-danger';
+    const toast = $(`
+      <div class="toast align-items-center ${toastClass} text-white border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    `);
+    
+    $('body').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0]);
+    bsToast.show();
+    
+    toast.on('hidden.bs.toast', function() {
+      toast.remove();
+    });
+  }
+});
+</script> 

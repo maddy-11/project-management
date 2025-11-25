@@ -1,0 +1,165 @@
+<!-- Period Information -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 bg-info text-white">
+        <h6 class="m-0 font-weight-bold">
+            <i class="fas fa-calendar-alt"></i> Report Period
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h5 class="text-info">
+                    {% if report_type == 'quarterly' %}
+                        <i class="fas fa-calendar-quarter"></i> {{ quarter_name }} {{ year }}
+                    {% else %}
+                        <i class="fas fa-calendar-year"></i> {{ year }}
+                    {% endif %}
+                </h5>
+                <small class="text-info">
+                    <i class="fas fa-info-circle"></i> 
+                    {% if report_type == 'quarterly' %}
+                        Showing revenue data for {{ quarter_name }} {{ year }}
+                    {% else %}
+                        Showing revenue data for the entire year {{ year }}
+                    {% endif %}
+                </small>
+
+            </div>
+            <div class="col-md-4 text-right">
+                <span class="badge badge-info badge-lg">{{ report_type|title }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="row">
+    <!-- Currency Summary Cards -->
+    {% if pkr_totals.amount > 0 %}
+    <div class="col-xl-6 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            PKR Total
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            PKR {{ pkr_totals.amount|floatformat:2 }}
+                        </div>
+                        <div class="text-xs text-gray-600">
+                            Invoice Amount: PKR {{ pkr_totals.net_amount|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-coins fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if usd_totals.amount > 0 %}
+    <div class="col-xl-6 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            USD Total
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            USD {{ usd_totals.amount|floatformat:2 }}
+                        </div>
+                        <div class="text-xs text-gray-600">
+                            Invoice Amount: USD {{ usd_totals.net_amount|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Invoice List Section -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 bg-info text-dark">
+        <h6 class="m-0 font-weight-bold">
+            {% if invoice_type == 'invoices_sent' %}
+                <i class="fas fa-paper-plane"></i> Invoices Sent (Due Date Today or Passed)
+            {% else %}
+                <i class="fas fa-dollar-sign"></i> Cash Received (Paid Invoices)
+            {% endif %}
+        </h6>
+    </div>
+    <div class="card-body">
+        {% if invoice_list %}
+            <div class="table-responsive">
+                <table class="table table-bordered text-nowrap" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Project</th>
+                            <th>Partner</th>
+                            {% if invoice_type == 'invoices_sent' %}
+                                <th>Due Date</th>
+                            {% else %}
+                                <th>Paid Date</th>
+                            {% endif %}
+                            <th>Amount</th>
+                            <th>Invoice Amount</th>
+                            <th>Currency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice_list %}
+                        <tr>
+                            <td>{{ item.invoice.invoice_no }}</td>
+                            <td>{{ item.invoice.project.name }}</td>
+                            <td>{{ item.invoice.project.partner.name|default:"N/A" }}</td>
+                            {% if invoice_type == 'invoices_sent' %}
+                                <td>{{ item.invoice.due_date|date:"M d, Y" }}</td>
+                            {% else %}
+                                <td>{{ item.invoice.paid_date|date:"M d, Y" }}</td>
+                            {% endif %}
+                            <td>{{ item.amount|floatformat:2 }}</td>
+                            <td>
+                                {{ item.net_amount|floatformat:2 }}
+                                {% if item.invoice.net_amount == 0 and item.invoice.amount > 0 %}
+                                    <br>
+                                    <small class="text-warning">
+                                        <i class="fas fa-info-circle"></i> Net amount defaulted to gross amount
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>{{ item.currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-info-circle fa-3x text-info mb-3"></i>
+                <h5 class="text-info">
+                    {% if invoice_type == 'invoices_sent' %}No Invoices Sent{% else %}No Cash Received{% endif %}
+                </h5>
+                <p class="text-muted">
+                    {% if invoice_type == 'invoices_sent' %}
+                        No invoices were sent during this period.
+                    {% else %}
+                        No invoices were paid during this period.
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+
