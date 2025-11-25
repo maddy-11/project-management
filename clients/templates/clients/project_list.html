@@ -70,15 +70,6 @@
           </select>
         </div>
         
-        <!-- Currency Filter -->
-        <div class="col-md-2">
-          <select class="form-select" id="currencyFilter">
-            <option value="">All Currencies</option>
-            <option value="PKR">PKR</option>
-            <option value="USD">USD</option>
-          </select>
-        </div>
-        
         <!-- Clear Filters Button -->
         <div class="col-md-1">
           <button class="btn btn-outline-secondary w-100" id="clearFilters" title="Clear all filters">
@@ -100,7 +91,6 @@
             <option value="partner">Partner (A-Z)</option>
             <option value="partner-desc">Partner (Z-A)</option>
             <option value="type">Type</option>
-            <option value="currency">Currency</option>
           </select>
         </div>
       </div>
@@ -130,9 +120,6 @@
               </th>
               <th class="border-0 py-3">
                 <i class="fas fa-tag me-2 text-primary"></i>Type
-              </th>
-              <th class="border-0 py-3">
-                <i class="fas fa-dollar-sign me-2 text-primary"></i>Currency
               </th>
               <th class="border-0 py-3 text-center">
                 <i class="fas fa-cogs me-2 text-primary"></i>Actions
@@ -173,12 +160,6 @@
                 <span class="badge {% if project.project_type == 'local' %}bg-success{% else %}bg-warning{% endif %}">
                   <i class="fa-solid fa-{% if project.project_type == 'local' %}home{% else %}globe{% endif %} me-1"></i>
                   {{ project.project_type|title }}
-                </span>
-              </td>
-              <td>
-                <span class="badge bg-light text-dark">
-                  <i class="fa-solid fa-{% if project.currency == 'PKR' %}rupee-sign{% else %}dollar-sign{% endif %} me-1"></i>
-                  {{ project.currency }}
                 </span>
               </td>
               <td class="text-center">
